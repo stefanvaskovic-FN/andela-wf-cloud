@@ -30,4 +30,21 @@ export default defineConfig({
 
   // Prerender by default; this is a static research page.
   output: 'static',
+
+  build: {
+    // 'file' (not the default 'directory'): emits reports/emergent-roles.html,
+    // a single flat file, instead of reports/emergent-roles/index.html. The
+    // directory form creates two URLs for the same page (with and without a
+    // trailing slash), and Webflow Cloud's own routing/CDN layer
+    // canonicalizes that ambiguity in the opposite direction from what
+    // Astro expects — a 307 adding the slash, a 301 removing it, forever.
+    // This was already confirmed as a real, separate cause of a redirect
+    // loop earlier in this project's history, and got dropped by accident
+    // during the later "remove base config" rewrite. Do not remove this
+    // again without re-testing the exact "/research-staging/reports/..."
+    // (a real page) vs "/research-staging/reports" (a non-existent path)
+    // comparison that first revealed it — the real pages loop, the 404s
+    // don't, and that asymmetry is the signature of this specific bug.
+    format: 'file',
+  },
 });
