@@ -5,7 +5,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import { publishedReports } from '../data/reports-registry';
 import { withBase } from '../lib/base';
 
-
+// Astro NE prepisuje doslovne stringove u HTML atributima — svaki asset i
+// interni link ispod ide kroz withBase(). Vidi src/lib/base.ts.
 const reports = publishedReports();
 
 const title = 'Andela Research · Workforce intelligence';
