@@ -3,6 +3,7 @@ export const prerender = true;
 
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { reportBySlug } from '../../data/reports-registry';
+import { withBase } from '../../lib/base';
 
 // Slug MUST match this file's name — see src/data/reports-registry.ts.
 const report = reportBySlug('emergent-roles')!;
@@ -16,8 +17,8 @@ import { TOP_SKILLS } from '../../reports/emergent-roles/data/topSkills';
 // which Webflow Cloud environment (/research-staging vs /research), not by
 // anything in this file.
 
-// No BASE_URL/base computation — see astro.config.mjs. Root-relative
-// paths with /research baked in literally.
+// Astro NE prepisuje doslovne stringove u HTML atributima — svaki asset
+// ispod ide kroz withBase(). Vidi src/lib/base.ts.
 const topSkills = TOP_SKILLS;
 
 const title = 'Emergent role classification from skill mapping · Andela Research';
@@ -102,13 +103,13 @@ function summaryMix(m: Record<string, number>) {
 const initialRows = [...CANDS].sort((a, b) => (b.bleed ?? -1) - (a.bleed ?? -1));
 ---
 
-<BaseLayout title={title} description={description} path="/reports/emergent-roles" noindex={report.status !== 'published'} schema={schema}>
+<BaseLayout title={title} description={description} noindex={report.status !== 'published'} schema={schema}>
 
 <Fragment slot="header">
 <header class="masthead">
   <div class="a-container">
     <div class="brand">
-      <img src="/images/andela-logo.png" alt="Andela" width="95" height="24" loading="eager">
+      <img src={withBase('images/andela-logo.png')} alt="Andela" width="95" height="24" loading="eager">
       <span class="div"></span>
       <span class="tag">Research</span>
     </div>
@@ -527,7 +528,7 @@ const initialRows = [...CANDS].sort((a, b) => (b.bleed ?? -1) - (a.bleed ?? -1))
 <Fragment slot="footer">
 <footer class="foot">
   <div class="a-container">
-    <img src="/images/andela-logo.png" alt="Andela" width="95" height="24" loading="lazy">
+    <img src={withBase('images/andela-logo.png')} alt="Andela" width="95" height="24" loading="lazy">
     <span class="fz">Andela Research · Workforce intelligence · © 2026 Andela</span>
   </div>
 </footer>
