@@ -1,0 +1,42 @@
+[
+  {
+    "id": "Monitoring",
+    "home": "Forward Deployed Engineer",
+    "pc": 18023
+  },
+  {
+    "id": "Software Development Life Cycle",
+    "home": "Technical Project Manager",
+    "pc": 14867
+  },
+  {
+    "id": "Cloud",
+    "home": "Technical Program Manager",
+    "pc": 9568
+  },
+  {
+    "id": "Access Management",
+    "home": "Technical Program Manager",
+    "pc": 9077
+  },
+  {
+    "id": "System Architecture",
+    "home": "Solutions Architect",
+    "pc": 8845
+  },
+  {
+    "id": "Hybrid Cloud",
+    "home": "Cloud Solutions Architect",
+    "pc": 8436
+  },
+  {
+    "id": "Kubernetes",
+    "home": "DevOps Engineer",
+    "pc": 5961
+  },
+  {
+    "id": "Operating System",
+    "home": "Embedded Software Engineer",
+    "pc": 5617
+  }
+]

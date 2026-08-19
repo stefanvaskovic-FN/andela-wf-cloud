@@ -1,0 +1,204 @@
+/* ==========================================================================
+   Andela — Design Tokens
+   --------------------------------------------------------------------------
+   Extracted from the live Webflow shared stylesheet
+   (andela-launch.webflow.shared.*.css), source of truth as of 2026-08.
+
+   These are the PRIMITIVES only. Do not add component styles here.
+   Names are shortened from Webflow's internal `--_primitives---group--name`
+   convention, but VALUES ARE VERBATIM. If a value here disagrees with the
+   live site, the live site wins — re-extract rather than patch by hand.
+
+   Deliberately standalone: this file duplicates values that also exist in
+   the Webflow stylesheet. That duplication is intentional. Webflow Cloud
+   apps must not depend on the parent site's CSS loading first.
+   ========================================================================== */
+
+:root {
+  /* ---- Primary ------------------------------------------------------- */
+  --a-emerald: #338632;
+  --a-dark-emerald: #245a23;
+  --a-darker-emerald: #163a16;
+  --a-light-emerald: #7fc87c;
+  --a-lighter-emerald: #d9eed8;
+  --a-lightest-emerald: #ecf7ec;
+
+  /* ---- Secondary (kale) ---------------------------------------------- */
+  --a-darker-kale: #132128;   /* canonical ink */
+  --a-dark-kale: #205257;
+  --a-kale: #307c84;
+  --a-light-kale: #7cbfc7;
+  --a-lighter-kale: #e0f3f5;
+  --a-lightest-kale: #f0fafb;
+
+  /* ---- Tertiary (opal) ----------------------------------------------- */
+  --a-opal: #b0d6ce;
+  --a-light-opal: #e7f2f0;
+
+  /* ---- Neutrals ------------------------------------------------------ */
+  --a-black: #000000;
+  --a-near-black: #141413;         /* Webflow calls this --black */
+  --a-darker-green-black: #2b373d;
+  --a-dark-green-black: #424d53;   /* canonical body text */
+  --a-green-black: #717a7e;
+  --a-light-green-black: #a1a6a9;
+  --a-lighter-green-black: #e7e9ea; /* canonical hairline / divider */
+  --a-lightest-green-black: #f5f5f5;
+  --a-almost-white: #fafafa;
+  --a-white: #ffffff;
+
+  /* ---- Accents (use sparingly; campaign pages only) ------------------ */
+  --a-orange: #fd853a;
+  --a-orange-light: #ffe1ce;
+  --a-orange-dark: #83421a;
+  --a-blue: #3b45f1;
+  --a-blue-light: #bec1f3;
+  --a-blue-dark: #21278c;
+  --a-purple: #9966ff;
+  --a-purple-light: #dccbff;
+  --a-purple-dark: #452e73;
+
+  /* ---- Support / status ---------------------------------------------- */
+  --a-success-light: #e9ffe9;
+  --a-success-dark: #007c34;
+  --a-info-light: #eef9fe;
+  --a-info-dark: #005f87;
+  --a-warning-light: #fffaeb;
+  --a-warning-dark: #8b6800;
+  --a-error-light: #fff0f0;
+  --a-error-dark: #990000;
+
+  /* ---- Danger scale -------------------------------------------------- */
+  --a-danger: #cb3b43;
+  --a-dark-danger: #9e2d33;
+  --a-darker-danger: #5e191d;
+  --a-light-danger: #e2a9ac;
+  --a-lighter-danger: #f6eaeb;
+
+  /* ---- Alpha overlays ------------------------------------------------ */
+  --a-white-5: #ffffff0d;
+  --a-white-10: #ffffff1a;
+  --a-white-15: #ffffff26;
+  --a-white-20: #ffffff33;
+  --a-white-30: #ffffff4d;
+  --a-white-40: #ffffff66;
+  --a-white-50: #ffffff80;
+  --a-white-60: #ffffff99;
+  --a-ink-5: #0000000d;
+  --a-ink-10: #0000001a;
+  --a-ink-15: #00000026;
+  --a-ink-20: #00000033;
+  --a-ink-30: #0000004d;
+  --a-ink-40: #00000066;
+  --a-ink-50: #00000080;
+  --a-ink-60: #00000099;
+
+  /* ---- Semantic aliases ------------------------------------------------
+     Prefer these in component CSS. Swapping a scheme then means changing
+     four lines here instead of hunting through every component.          */
+  --a-bg: var(--a-white);
+  --a-bg-subtle: var(--a-almost-white);
+  --a-text: var(--a-darker-kale);
+  --a-text-muted: var(--a-dark-green-black);
+  --a-border: var(--a-lighter-green-black);
+  --a-accent: var(--a-emerald);
+  --a-link: var(--a-kale);
+
+  /* ---- Typography: families ------------------------------------------ */
+  --a-font-heading: "Droid Serif", Georgia, "Times New Roman", serif;
+  --a-font-body: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  /* ---- Typography: weights ------------------------------------------- */
+  --a-weight-regular: 400;
+  --a-weight-medium: 500;
+  --a-weight-bold: 600;   /* Andela's "bold" token is 600, not 700 */
+
+  /* ---- Typography: sizes --------------------------------------------- */
+  --a-size-jumbo: 5rem;      /* 80px */
+  --a-size-h1: 4.5rem;       /* 72px */
+  --a-size-h2: 3.375rem;     /* 54px */
+  --a-size-h3: 2.875rem;     /* 46px */
+  --a-size-h4: 2rem;         /* 32px */
+  --a-size-h5: 1.5rem;       /* 24px */
+  --a-size-h6: 1.125rem;     /* 18px */
+  --a-size-text-2xl: 1.5rem;
+  --a-size-text-xl: 1.375rem;
+  --a-size-text-l: 1.125rem;
+  --a-size-text: 1rem;
+  --a-size-text-m: 1rem;
+  --a-size-text-s: 0.875rem;
+  --a-size-text-xs: 0.8125rem;
+
+  /* ---- Typography: line heights & tracking --------------------------- */
+  --a-leading-s: 1.1em;
+  --a-leading: 1.3em;
+  --a-leading-l: 1.5em;
+  --a-tracking-body: -0.3px;
+  --a-tracking-h1: -0.01em;
+  --a-tracking-h2: -1.2px;
+
+  /* ---- Spacing scale -------------------------------------------------- */
+  --a-space-0: 0rem;
+  --a-space-4xs: 0.125rem;
+  --a-space-3xs: 0.25rem;
+  --a-space-2xs: 0.5rem;
+  --a-space-xs: 0.75rem;
+  --a-space-s: 0.875rem;
+  --a-space-m: 1rem;
+  --a-space-l: 1.25rem;
+  --a-space-xl: 1.5rem;
+  --a-space-2xl: 2rem;
+  --a-space-2-5xl: 2.5rem;
+  --a-space-3xl: 3rem;
+  --a-space-3-5xl: 3.5rem;
+  --a-space-4xl: 4rem;
+  --a-space-4-5xl: 4.5rem;
+  --a-space-5xl: 5rem;
+  --a-space-5-5xl: 5.5rem;
+  --a-space-6xl: 6rem;
+  --a-space-7xl: 7rem;
+  --a-space-8xl: 8rem;
+
+  /* ---- Layout -------------------------------------------------------- */
+  --a-container-max: 90rem;     /* 1440px */
+  --a-container-pad: 5rem;      /* 80px each side at desktop */
+  --a-grid-gap: 1rem;
+  --a-grid-columns: 12;
+
+  /* ---- Radii --------------------------------------------------------- */
+  --a-radius-small: 0.5rem;
+  --a-radius-medium: 0.75rem;
+  --a-radius-large: 1rem;
+  --a-radius-pill: 1600px;
+  --a-radius-round: 100%;
+
+  /* ---- Borders ------------------------------------------------------- */
+  --a-border-width: 1px;
+  --a-divider-width: 1px;
+
+  /* ---- Shadows ------------------------------------------------------- */
+  --a-shadow-xxsmall: 0 1px 2px #0000000d;
+  --a-shadow-xsmall: 0 1px 3px #0000001a, 0 1px 2px #0000000f;
+  --a-shadow-small: 0 4px 8px -2px #0000001a, 0 2px 4px -2px #0000000f;
+  --a-shadow-medium: 0 12px 16px -4px #00000014, 0 4px 6px -2px #00000008;
+  --a-shadow-large: 0 20px 24px -4px #00000014, 0 8px 8px -4px #00000008;
+  --a-shadow-xlarge: 0 24px 48px -12px #0000002e;
+  --a-shadow-xxlarge: 0 32px 64px -12px #00000024;
+
+  /* ---- Motion --------------------------------------------------------
+     Not tokenised in the Webflow file; these match observed transitions. */
+  --a-transition-fast: 0.2s ease;
+  --a-transition: 0.25s ease;
+}
+
+/* Responsive container padding. The Webflow site steps this down at its
+   standard breakpoints (991 / 767 / 479). Match those, not Tailwind's. */
+@media screen and (max-width: 991px) {
+  :root { --a-container-pad: 2.5rem; }
+}
+@media screen and (max-width: 767px) {
+  :root { --a-container-pad: 1.5rem; }
+}
+@media screen and (max-width: 479px) {
+  :root { --a-container-pad: 1.25rem; }
+}

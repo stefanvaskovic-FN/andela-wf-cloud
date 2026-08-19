@@ -1,0 +1,105 @@
+---
+/**
+ * BaseLayout.astro
+ *
+ * Every page goes through this layout. It owns the things that must never be
+ * forgotten on a new page: lang, canonical, the meta block, the design system
+ * import, and the skip link. Pages pass title, description, and optionally
+ * ogImage / schema — that way a new page can't quietly ship without a
+ * canonical or structured data.
+ */
+import '../styles/andela/index.css';
+
+interface Props {
+  /** ~50–60 chars. Unique per page. Include "Andela" once. */
+  title: string;
+  /** ~150–160 chars, written as a search result, not a summary of the summary. */
+  description: string;
+  /** Full site-root-relative path, e.g. "/" or "/reports/emergent-roles". Webflow Cloud's edge adds the environment prefix (/research, /research-staging) — this app never references it. */
+  path?: string;
+  /** Absolute or root-relative image URL, 1200x630. */
+  ogImage?: string;
+  /** "website" for landing pages, "article" for research writeups. */
+  ogType?: string;
+  /** JSON-LD object (typically a @graph). Serialised into a script tag. */
+  schema?: Record<string, unknown>;
+  /** Set true to exclude from indexing (staging, thank-you pages). */
+  noindex?: boolean;
+}
+
+const {
+  title,
+  description,
+  path = '/research',
+  ogImage,
+  ogType = 'article',
+  schema,
+  noindex = false,
+} = Astro.props;
+
+// Astro.site comes from `site` in astro.config.mjs. No `base` involved —
+// the /research segment is physically part of `path` here, since pages
+// live at plain root paths. See astro.config.mjs for why.
+const canonical = new URL(path, Astro.site).href;
+const resolvedOgImage = ogImage
+  ? new URL(ogImage, Astro.site).href
+  : new URL('/images/og-default.png', Astro.site).href;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
+
+    <!-- Self-hosted fonts (no fonts.googleapis.com). Preload the above-the-fold weights. -->
+    <link rel="preload" href="/fonts/Inter-Regular.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/DroidSerif-Regular.ttf" as="font" type="font/ttf" crossorigin />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content={ogType} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={resolvedOgImage} />
+    <meta property="og:site_name" content="Andela" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={resolvedOgImage} />
+
+    {schema && (
+      <script type="application/ld+json" set:html={JSON.stringify(schema)} />
+    )}
+
+    <slot name="head" />
+  </head>
+
+  <body>
+    <!-- First focusable element on the page. Required. -->
+    <a href="#main" class="a-skip-link">Skip to content</a>
+
+    <slot name="header" />
+
+    <main id="main">
+      <slot />
+    </main>
+
+    <slot name="footer" />
+
+    <!--
+      Shared live region. Any dynamic update anywhere on the page announces
+      through here (table re-sort, expand/collapse), so individual scripts
+      don't each invent their own.
+      Usage: document.getElementById('a11y-status').textContent = '…';
+    -->
+    <div id="a11y-status" role="status" aria-live="polite" class="a-visually-hidden"></div>
+  </body>
+</html>

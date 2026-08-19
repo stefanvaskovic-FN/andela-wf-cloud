@@ -1,0 +1,186 @@
+/* ==========================================================================
+   Andela — Typography
+   --------------------------------------------------------------------------
+   Mirrors the base heading/text rules from the Webflow shared stylesheet.
+   Load AFTER tokens.css and elements.css.
+
+   Two things to know before you touch this file:
+
+   1. Headings are Droid Serif at weight 400 — NOT bold. Andela's headings
+      get their presence from size, not weight. Bolding an h1 is the single
+      most common way an embedded page stops looking like Andela.
+
+   2. The h1/h2/h3 sizes below (72/54/46px) are DESKTOP sizes with no
+      built-in fluid scaling. Webflow handles the step-down with breakpoint
+      overrides. This file does the same via clamp(), which is equivalent
+      in effect and less code — but if a design comp specifies exact
+      breakpoint sizes, use the breakpoint block at the bottom instead.
+   ========================================================================== */
+
+h1, h2, h3, h4, h5, h6 {
+  margin-top: var(--a-space-0);
+  margin-bottom: var(--a-space-0);
+  font-family: var(--a-font-heading);
+  font-weight: var(--a-weight-regular);
+  color: var(--a-text);
+}
+
+h1 {
+  font-size: clamp(2.5rem, 5.5vw, var(--a-size-h1));
+  line-height: 1.2;
+  letter-spacing: var(--a-tracking-h1);
+}
+
+h2 {
+  font-size: clamp(2rem, 4vw, var(--a-size-h2));
+  line-height: 1.2;
+  letter-spacing: var(--a-tracking-h2);
+}
+
+h3 {
+  font-size: clamp(1.75rem, 3.4vw, var(--a-size-h3));
+  line-height: 1.2;
+}
+
+h4 {
+  font-size: clamp(1.5rem, 2.4vw, var(--a-size-h4));
+  line-height: 1.3;
+}
+
+h5 {
+  font-size: var(--a-size-h5);
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+}
+
+h6 {
+  font-size: var(--a-size-h6);
+  line-height: 1.4;
+}
+
+/* --------------------------------------------------------------------------
+   Body copy
+   -------------------------------------------------------------------------- */
+
+body {
+  font-family: var(--a-font-body);
+  font-size: var(--a-size-text);
+  line-height: 1.5;
+  letter-spacing: var(--a-tracking-body);
+  color: var(--a-text);
+  background-color: var(--a-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+p { margin-bottom: 0; }
+
+/* Webflow zeroes paragraph margins and spaces with layout utilities instead.
+   Keep that convention — use .a-stack or explicit gap, not p margins. */
+
+/* --------------------------------------------------------------------------
+   Text size utilities (names match Webflow so comps translate 1:1)
+   -------------------------------------------------------------------------- */
+
+.a-text-2xl   { font-size: var(--a-size-text-2xl); }
+.a-text-xl    { font-size: var(--a-size-text-xl); }
+.a-text-l     { font-size: var(--a-size-text-l); }
+.a-text-m     { font-size: var(--a-size-text-m); font-weight: var(--a-weight-medium); }
+.a-text-s     { font-size: var(--a-size-text-s); }
+.a-text-xs    { font-size: var(--a-size-text-xs); }
+
+.a-weight-regular  { font-weight: var(--a-weight-regular); }
+.a-weight-medium   { font-weight: var(--a-weight-medium); }
+.a-weight-bold     { font-weight: var(--a-weight-bold); }
+
+.a-leading-tight { line-height: 1.2; }
+.a-leading-base  { line-height: 1.3; }
+.a-leading-loose { line-height: 1.5; }
+
+/* --------------------------------------------------------------------------
+   Named text styles
+   -------------------------------------------------------------------------- */
+
+/* Eyebrow / kicker above a heading. NOTE: Andela's own eyebrow uses
+   --a-green-black (#717a7e), which is 4.39:1 on white — under the 4.5:1
+   AA threshold for normal-size text. This file uses --a-text-muted
+   (#424d53, 8.68:1) instead. If a comp insists on the lighter grey,
+   flag it rather than silently shipping a contrast failure. */
+.a-eyebrow {
+  font-family: var(--a-font-body);
+  font-size: var(--a-size-text);
+  font-weight: var(--a-weight-bold);
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--a-text-muted);
+}
+
+/* All-caps micro-label. Not a Webflow token — added because research pages
+   need dense labelling. Uses tracking to stay legible at small caps. */
+.a-label {
+  font-family: var(--a-font-body);
+  font-size: var(--a-size-text-xs);
+  font-weight: var(--a-weight-bold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--a-text-muted);
+}
+
+.a-tagline {
+  font-weight: var(--a-weight-bold);
+  text-decoration: none;
+}
+
+.a-legal {
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: var(--a-text-muted);
+}
+
+.a-quote,
+blockquote {
+  border-left: 0.1875rem solid var(--a-text);
+  margin-bottom: 0;
+  padding: var(--a-space-xs) var(--a-space-l);
+  font-size: var(--a-size-text-l);
+  line-height: 1.5;
+}
+
+/* Numeric display — for stat blocks. Serif, matching Andela's stat cards. */
+.a-stat-value {
+  font-family: var(--a-font-heading);
+  font-size: clamp(1.75rem, 4vw, 4.125rem);
+  line-height: 1.1;
+  color: var(--a-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.a-stat-label {
+  font-size: var(--a-size-text-xs);
+  font-weight: var(--a-weight-medium);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--a-text-muted);
+}
+
+/* --------------------------------------------------------------------------
+   Rich text — when rendering markdown or CMS-authored prose
+   -------------------------------------------------------------------------- */
+
+.a-richtext > * + * { margin-top: var(--a-space-m); }
+.a-richtext h2,
+.a-richtext h3,
+.a-richtext h4 { margin-top: var(--a-space-xl); margin-bottom: var(--a-space-m); }
+.a-richtext h5,
+.a-richtext h6 { margin-top: var(--a-space-l); margin-bottom: var(--a-space-m); }
+.a-richtext p  { margin-bottom: var(--a-space-m); }
+.a-richtext ul { margin: var(--a-space-m) 0; padding-left: var(--a-space-l); }
+.a-richtext ol { margin: var(--a-space-m) 0; padding-left: var(--a-space-xl); }
+.a-richtext li { margin: var(--a-space-3xs) 0; padding-left: var(--a-space-2xs); }
+.a-richtext figure { margin: var(--a-space-3xl) 0; }
+.a-richtext figcaption {
+  border-left: 2px solid var(--a-text);
+  margin-top: var(--a-space-2xs);
+  padding-left: var(--a-space-2xs);
+  font-size: var(--a-size-text-s);
+  text-align: left;
+}

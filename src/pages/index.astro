@@ -1,0 +1,112 @@
+---
+export const prerender = true;
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { publishedReports } from '../data/reports-registry';
+
+// No BASE_URL/base computation — see astro.config.mjs. Every asset and
+// internal link below is a plain root-relative path with /research baked
+// in literally, matching where this page physically lives
+// (src/pages/index.astro). Webflow Cloud's edge adds the /research or /research-staging prefix externally.
+const reports = publishedReports();
+
+const title = 'Andela Research · Workforce intelligence';
+const description = 'Original research on how software engineering roles, skills, and hiring patterns are changing — from Andela.';
+
+const schema = {
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: title,
+  description,
+  url: 'https://www.andela.com/research',
+  publisher: {
+    '@type': 'Organization',
+    name: 'Andela',
+    url: 'https://www.andela.com/',
+  },
+};
+---
+
+<BaseLayout title={title} description={description} path="/" schema={schema}>
+  <Fragment slot="header">
+    <header class="masthead">
+      <div class="a-container">
+        <div class="brand">
+          <img src="/images/andela-logo.png" alt="Andela" width="95" height="24" loading="eager">
+          <span class="div"></span>
+          <span class="tag">Research</span>
+        </div>
+      </div>
+    </header>
+  </Fragment>
+
+  <section>
+    <div class="a-container narrow">
+      <div class="a-eyebrow">Andela Research</div>
+      <h1 class="serif" style="font-size:2.5rem;margin-top:8px">Workforce intelligence</h1>
+      <p style="margin-top:16px;font-size:1.05rem">Original research on how software engineering roles, skills, and
+        hiring patterns are changing — grounded in real hiring data, not
+        surveys or predictions.</p>
+      <p style="margin-top:16px">Each report below starts from a concrete
+        dataset — job postings, skill taxonomies, hiring outcomes — and
+        works forward to a specific, falsifiable finding. Where a finding
+        depends on a judgment call or a limitation in the underlying data,
+        the report says so directly rather than smoothing it over. Methods,
+        validation, and known limitations are documented on every report
+        page, not just the headline result.</p>
+      <p style="margin-top:16px">Reports are added as the underlying analysis
+        is finished and reviewed, not on a fixed schedule. Older reports stay
+        published even after newer ones cover related ground; the date on
+        each one reflects when its analysis was run, and later reports do
+        not silently supersede it.</p>
+    </div>
+  </section>
+
+  <section class="section-alt">
+    <div class="a-container narrow">
+      <h2 class="serif" style="font-size:1.6rem;margin-bottom:24px">Reports</h2>
+      {reports.length === 0 ? (
+        <p>No reports published yet.</p>
+      ) : (
+        <div class="report-list">
+          {reports.map((r) => (
+            <a class="report-card" href={`/reports/${r.slug}`}>
+              <h3 class="serif" style="font-size:1.4rem">{r.title}</h3>
+              <p style="margin-top:8px;color:var(--a-text-muted)">{r.description}</p>
+              <span class="report-date">{new Date(r.publishedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  </section>
+
+  <Fragment slot="footer">
+    <footer class="foot">
+      <div class="a-container">
+        <img src="/images/andela-logo.png" alt="Andela" width="95" height="24" loading="lazy">
+        <span class="fz">Andela Research · Workforce intelligence · © 2026 Andela</span>
+      </div>
+    </footer>
+  </Fragment>
+
+  <style is:global>
+    .masthead{border-bottom:1px solid var(--a-border);background:var(--a-almost-white)}
+    .masthead .a-container{display:flex;align-items:center;padding:18px 0}
+    .brand{display:flex;align-items:center;gap:10px}
+    .brand .div{width:1px;height:16px;background:var(--a-border)}
+    .brand .tag{font-size:12px;font-weight:600;letter-spacing:.5px;color:var(--a-text-muted);text-transform:uppercase}
+    .narrow{max-width:760px}
+    section{padding:6rem 0}
+    @media(max-width:767px){section{padding:3.5rem 0}}
+    .report-list{display:flex;flex-direction:column;gap:1px;background:var(--a-border);border:1px solid var(--a-border);border-radius:14px;overflow:hidden}
+    .report-card{display:block;background:var(--a-white);padding:28px 30px;text-decoration:none;color:inherit}
+    .report-card:hover{background:var(--a-almost-white)}
+    .report-card:focus-visible{outline:2px solid var(--a-emerald);outline-offset:-2px}
+    .report-date{display:block;margin-top:14px;font-size:12.5px;color:var(--a-text-muted)}
+    .foot{border-top:1px solid var(--a-border);padding:34px 0;background:var(--a-almost-white)}
+    .foot .a-container{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px}
+    .foot img{height:20px}
+    .foot .fz{font-size:12.5px;color:var(--a-text-muted)}
+  </style>
+</BaseLayout>

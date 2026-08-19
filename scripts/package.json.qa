@@ -1,0 +1,14 @@
+{
+  "name": "andela-page-audit",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Static HTML audit for SEO, accessibility and Webflow Cloud base-path correctness.",
+  "bin": { "andela-audit": "./audit.mjs" },
+  "scripts": {
+    "audit": "node audit.mjs dist --base /research"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0"
+  }
+}

@@ -1,0 +1,132 @@
+/* ==========================================================================
+   Andela — Base elements & reset
+   Load FIRST, before typography.css and components.css.
+   ========================================================================== */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+  /* Defense-in-depth against horizontal scroll on mobile: any element
+     anywhere (a visually-hidden table, a chart with a wide intrinsic size,
+     a badly-constrained flex item) that ends up wider than the viewport
+     should clip rather than let the whole page grow sideways. This must
+     not be relied on as the fix for a specific overflow — find and fix the
+     actual offending element first — but it's cheap, harmless insurance
+     that every report page gets automatically. */
+  overflow-x: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+body { margin: 0; min-height: 100%; overflow-x: hidden; }
+
+img, svg, video, canvas {
+  max-width: 100%;
+  display: block;
+}
+
+a {
+  color: var(--a-link);
+  text-decoration: none;
+}
+a:hover { text-decoration: underline; }
+
+/* Prose links must not rely on colour alone (WCAG 1.4.1). Inside body copy,
+   underline by default. Nav and button-like links opt out via .a-link-plain. */
+.a-richtext a,
+p a { text-decoration: underline; text-underline-offset: 0.15em; }
+.a-link-plain { text-decoration: none; }
+
+strong, b { font-weight: var(--a-weight-bold); }
+
+hr {
+  border: 0;
+  border-top: var(--a-divider-width) solid var(--a-border);
+  margin: var(--a-space-2xl) 0;
+}
+
+table { border-collapse: collapse; border-spacing: 0; width: 100%; }
+th { text-align: left; font-weight: var(--a-weight-bold); }
+th, td {
+  padding: var(--a-space-xs) var(--a-space-2xs);
+  border-bottom: 1px solid var(--a-border);
+}
+
+/* --------------------------------------------------------------------------
+   Focus — the single most important accessibility rule in this file.
+   Never remove the outline without replacing it. :focus-visible keeps mouse
+   clicks clean while preserving keyboard rings.
+   -------------------------------------------------------------------------- */
+
+:focus-visible {
+  outline: 2px solid var(--a-emerald);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Explicitly do NOT do this:  *:focus { outline: none; }  */
+
+/* --------------------------------------------------------------------------
+   Form controls
+   -------------------------------------------------------------------------- */
+
+button, input, select, textarea {
+  font: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  margin: 0;
+}
+
+button { cursor: pointer; background: none; border: 0; padding: 0; }
+
+label {
+  display: block;
+  margin-bottom: var(--a-space-3xs);
+  font-weight: var(--a-weight-medium);
+}
+
+.a-input {
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.625rem var(--a-space-xs);
+  font-size: var(--a-size-text-s);
+  line-height: 1.25rem;
+  letter-spacing: 0;
+  color: var(--a-text);
+  background-color: var(--a-white);
+  border: 1px solid var(--a-light-green-black);
+  border-radius: var(--a-radius-small);
+}
+.a-input:focus,
+.a-input:focus-visible { border-color: var(--a-dark-kale); }
+
+/* Andela's placeholder token (#a1a6a9) is 2.46:1 on white — well below the
+   4.5:1 AA threshold. Placeholders are exempt from AA in the letter of the
+   spec, but they are not a substitute for a label. Always render a real
+   <label>; never use a placeholder as the only field name. */
+.a-input::placeholder {
+  color: var(--a-light-green-black);
+  font-size: var(--a-size-text-s);
+  letter-spacing: 0;
+}
+
+.a-input.is-invalid { border-color: var(--a-error-dark); }
+
+.a-field-error {
+  display: flex;
+  align-items: center;
+  gap: var(--a-space-3xs);
+  margin-top: var(--a-space-3xs);
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: var(--a-error-dark);
+}

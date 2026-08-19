@@ -1,0 +1,904 @@
+---
+export const prerender = true;
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { reportBySlug } from '../../data/reports-registry';
+
+// Slug MUST match this file's name — see src/data/reports-registry.ts.
+const report = reportBySlug('emergent-roles')!;
+import { CANDS, VAL, fmt, bleedRankMap, type Candidate } from '../../reports/emergent-roles/data/roles';
+import { cardHTML } from '../../reports/emergent-roles/scripts/explorer';
+import { TOP_SKILLS } from '../../reports/emergent-roles/data/topSkills';
+
+// This file's path (src/pages/reports/emergent-roles.astro) IS the URL:
+// /reports/emergent-roles here (Webflow Cloud adds the /research or /research-staging prefix externally). No registry, no draft/publish switch —
+// staging vs. production is handled by which git branch is deployed to
+// which Webflow Cloud environment (/research-staging vs /research), not by
+// anything in this file.
+
+// No BASE_URL/base computation — see astro.config.mjs. Root-relative
+// paths with /research baked in literally.
+const topSkills = TOP_SKILLS;
+
+const title = 'Emergent role classification from skill mapping · Andela Research';
+const description = 'Detecting emergent software roles in Fortune 500 hiring through cross-boundary skill bleed: 47,101 postings, 2,026 skills, 23 candidate roles.';
+
+const schema = {
+  '@context': 'https://schema.org',
+  // '@type' on the root alongside '@graph' satisfies audit tools that expect
+  // every top-level JSON-LD block to declare a type; the entities that
+  // actually matter for rich results are the typed items inside '@graph'.
+  '@type': 'WebPage',
+  '@graph': [
+    {
+      '@type': 'Organization',
+      '@id': 'https://www.andela.com/#organization',
+      name: 'Andela',
+      url: 'https://www.andela.com/',
+      logo: 'https://www.andela.com/images/andela-logo.png',
+      sameAs: ['https://www.linkedin.com/company/andela/', 'https://x.com/andela'],
+    },
+    {
+      '@type': 'Dataset',
+      '@id': 'https://www.andela.com/research/reports/emergent-roles#dataset',
+      name: 'Emergent Role Explorer: skill bleed across Fortune 500 tech hiring',
+      description: 'Skill co-occurrence measures derived from 47,101 Fortune 500 job postings, scoring 2,026 skills and 23 candidate emergent-role clusters.',
+      url: 'https://www.andela.com/research/reports/emergent-roles',
+      keywords: ['emergent roles', 'skill adjacency', 'AI and tech jobs', 'job posting analysis', 'workforce research'],
+      creator: { '@id': 'https://www.andela.com/#organization' },
+      publisher: { '@id': 'https://www.andela.com/#organization' },
+      datePublished: '2026-06-16',
+      dateModified: '2026-06-16',
+      isAccessibleForFree: true,
+      variableMeasured: [
+        { '@type': 'PropertyValue', name: 'Cross-role bleed', description: "Rate at which a skill appears in postings for roles other than its home role, relative to chance" },
+        { '@type': 'PropertyValue', name: 'Emergence score', description: "Combines share of skills born 2023 or later with normalized median technology birth year" },
+        { '@type': 'PropertyValue', name: 'Median vintage', description: "Median first-release year of the technologies in a candidate bundle" },
+      ],
+      measurementTechnique: 'Community detection over a skill co-occurrence graph built from job posting text',
+      size: '47101 job postings; 2026 skills; 23 candidate emergent-role clusters; 2713 sampled cross-role edges',
+    },
+    {
+      '@type': 'ScholarlyArticle',
+      '@id': 'https://www.andela.com/research/reports/emergent-roles#article',
+      headline: 'Emergent role classification from skill mapping',
+      description,
+      author: { '@type': 'Person', name: 'Cory Hymel', jobTitle: 'Head of Research', worksFor: { '@id': 'https://www.andela.com/#organization' } },
+      publisher: { '@id': 'https://www.andela.com/#organization' },
+      datePublished: '2026-06-16',
+      dateModified: '2026-06-16',
+      isBasedOn: { '@id': 'https://www.andela.com/research/reports/emergent-roles#dataset' },
+      about: [
+        { '@type': 'Thing', name: 'Software engineering occupations' },
+        { '@type': 'Thing', name: 'Artificial intelligence and labour markets' },
+      ],
+    },
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Andela', item: 'https://www.andela.com/' },
+        { '@type': 'ListItem', position: 2, name: 'Research', item: 'https://www.andela.com/research' },
+        { '@type': 'ListItem', position: 3, name: 'Emergent Role Explorer' },
+      ],
+    },
+  ],
+};
+
+const bleedRank = bleedRankMap();
+function recencyCell(c: Candidate) {
+  if (c.emergence === null || c.median_vintage == null) return { band: 'na' as const, label: 'not scored', yr: undefined as number | undefined };
+  const yr = c.median_vintage;
+  if (yr >= 2018) return { band: 'emerging' as const, label: 'Emerging', yr };
+  if (yr >= 2010) return { band: 'recent' as const, label: 'Recent', yr };
+  return { band: 'settled' as const, label: 'Settled', yr };
+}
+function summaryMix(m: Record<string, number>) {
+  const tot = Object.values(m).reduce((s, x) => s + x, 0);
+  return Object.entries(m).slice(0, 3).map(([r, v]) => `${r} ${Math.round((100 * v) / tot)}%`).join(' · ');
+}
+// Default server-rendered sort matches the client script's initial state (bleed, desc)
+// so the prerendered HTML and the first client render are identical — see
+// src/scripts/explorer.ts, which skips re-inserting content that's already here.
+const initialRows = [...CANDS].sort((a, b) => (b.bleed ?? -1) - (a.bleed ?? -1));
+---
+
+<BaseLayout title={title} description={description} path="/reports/emergent-roles" noindex={report.status !== 'published'} schema={schema}>
+
+<Fragment slot="header">
+<header class="masthead">
+  <div class="a-container">
+    <div class="brand">
+      <img src="/images/andela-logo.png" alt="Andela" width="95" height="24" loading="eager">
+      <span class="div"></span>
+      <span class="tag">Research</span>
+    </div>
+    <nav class="topnav">
+      <a href="#goal">Goal</a>
+      <a href="#method">Method</a>
+      <a href="#landscape">Findings</a>
+      <a href="#validation">Validation</a>
+      <a href="#limits">Limitations</a>
+    </nav>
+  </div>
+</header>
+
+</Fragment>
+
+<!-- ================= HERO ================= -->
+<div class="hero">
+  <svg class="spark-field" aria-hidden="true"><defs>
+    <pattern id="sparks" width="120" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(8)">
+      <path d="M60 30C60 30 63 57 60 60C57 63 30 60 30 60C30 60 57 57 60 60C63 63 60 90 60 90C60 90 57 63 60 60C63 57 90 60 90 60C90 60 63 63 60 60C57 57 60 30 60 30Z" fill="#7CBFC7"/>
+    </pattern></defs>
+    <rect width="100%" height="100%" fill="url(#sparks)"/>
+  </svg>
+  <div class="a-container">
+    <span class="a-eyebrow">Andela Research · Workforce intelligence</span>
+    <h1 class="serif">Emergent role classification from skill mapping</h1>
+    <p class="dek">Every few years a new engineering role forms where two older ones overlap. Dev plus Sec plus Ops became DevSecOps. A software engineer who picked up statistics and model training became an ML Engineer. This study detects these new roles as they form by analyzing 47,101 Fortune&nbsp;500 software job postings against a map of what each established role was historically supposed to require.</p>
+    <div class="meta">A cross-sectional study of US Fortune 500 software hiring · June 2026</div>
+    <div class="meta"><b>Author:</b> Cory Hymel · Head of Research, Andela</div>
+  </div>
+</div>
+
+<!-- ================= STAT STRIP ================= -->
+<div class="statstrip">
+  <div class="a-container">
+    <div class="stat"><div class="num">47,101</div><div class="lbl">Fortune 500 software postings analyzed</div></div>
+    <div class="stat"><div class="num">2,026</div><div class="lbl">Distinct skills scored and placed</div></div>
+    <div class="stat"><div class="num">23</div><div class="lbl">Emergent role candidates detected</div></div>
+  </div>
+</div>
+
+<!-- ================= GOAL ================= -->
+<section id="goal">
+  <div class="a-container">
+    <span class="a-eyebrow kicker">The question</span>
+    <h2 class="head">What we set out to find</h2>
+    <div class="narrow">
+    <p class="lead">Job titles lag the work. A company hires a "data scientist" and then asks them to ship LLM agents; it posts for a "security engineer" who turns out to live inside the deployment pipeline. The skills move first, and the title catches up years later. At Andela we're obsessed with identifying these shifts early and this study is a lens into how we catch that movement while it is happening.</p>
+
+    <div class="pull serif pull--wide">An emergent role is a stabilized pattern of skill "bleed" across historically distinct roles. More formally we define it as a recurring bundle of skills whose canonical homes belong to different jobs.</div>
+
+    <p>This is how the ML Engineer formed in the gap between software engineering and statistics, how DevSecOps formed between development, security, and operations, and it may be how the AI Agent Developer is forming right now between backend engineering and LLM orchestration (spoiler: our data says not yet; see finding 02). A role emerges in the seam between two older ones as their skill sets <i>bleed</i> together.</p>
+
+    <h3 class="serif" style="font-size:1.35rem;margin-top:42px">Detecting emergence without a clock</h3>
+    <p>Emergence usually means change over time, but this corpus is a single five-week snapshot (30 March to 2 May 2026) of job postings pulled from current, publicly facing Fortune 500 job boards. So we reframed "historical" as structure rather than date with every established role requiring a certain set of skills. These skill mappings are from Andela's internal skill taxonomy, which we use to identify emerging skill bundles. We measure how far the postings have drifted from that baseline, and we date the technologies involved: a skill bundle built on tools born in the last three years (2023 or later, against a corpus collected in 2026) is emergent by construction, while one built on decade-old tools is a hybrid that already settled. Canonical drift plus technology vintage stand in for the missing time axis.</p>
+
+    <p class="muted" style="font-size:15px">We have a wider thesis on <strong>talent debt</strong>, which is that skill half-lives are shrinking from roughly a decade to a couple of years or less. We cannot measure half-life on a five-week window, so it is not a focus for this research, but we can see which skill bundles are fusing into new roles, which is the leading edge of the same phenomenon.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= KEY FINDINGS ================= -->
+<section class="section-alt" id="findings">
+  <div class="a-container">
+    <span class="a-eyebrow kicker">At a glance</span>
+    <h2 class="head">What the data shows</h2>
+    <div class="findgrid">
+      <div class="find">
+        <span class="fnum">01</span>
+        <h3>The strongest signal is a role still settling into its name</h3>
+        <p>The <span class="em">MLOps Pipeline Engineer</span>, who builds and runs the automated infrastructure to deploy, version, and monitor machine-learning models in production, scores highest on emergence. It bridges <span class="em">ML Engineering, DevOps, and Data Engineering</span>, pulling together MLOps, CI/CD for ML, model registries and versioning, workflow orchestration, and ML observability. Its skill bundle appears in <span class="em">1,582</span> postings (postings whose skills contain the bundle, not postings titled for it), and the validation below matches it to MLOps Engineer, the youngest of the known emergent roles: the detector's top candidate is a role caught while its title is still consolidating across enterprises, not a brand-new invention.</p>
+      </div>
+      <div class="find">
+        <span class="fnum">02</span>
+        <h3>The AI frontier is narrower than the hype</h3>
+        <p>Exactly one AI bundle ranks among the most-emergent candidates: the <span class="em">LLM Application Engineer</span>, the contemporary AI engineer building on foundation models rather than training them, third by recency across 6,758 postings. Once every bundle's technologies are dated, no candidate's stack has a median birth year later than <span class="em">2019</span>: Fortune&nbsp;500 hiring trails the technology frontier by several years, and the newest tools (post-2023 agent frameworks and the like) have not yet stabilized into any recurring cross-role bundle in this corpus.</p>
+      </div>
+      <div class="find">
+        <span class="fnum">03</span>
+        <h3>Employers name the old role, hire the new one</h3>
+        <p> Among postings still titled for a familiar role like "AI Engineer" or "ML Engineer," <span class="em">53%</span> already demand the newer skill set: large language models and conversational AI wired through the OpenAI API and Vertex AI, evaluated with structured harnesses like OpenAI Evals. The title names a role employers already know, but the skills describe an emerging one that has no settled name yet.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= METHOD ================= -->
+<section id="method">
+  <div class="a-container">
+    <span class="a-eyebrow kicker">The method</span>
+    <h2 class="head">How we detected emergence in a snapshot</h2>
+    <p class="lead narrow">Through seven steps we turn a pile of job postings into a ranked list of forming roles.</p>
+
+    <div class="stepper">
+      <div class="step"><div class="n">1</div><h3>Baselines</h3><p>Build each role's "before" two independent ways: taxonomy skill centroids and the profiles of title-pure postings.</p></div>
+      <div class="step"><div class="n">2</div><h3>Home roles</h3><p>Assign every skill the established role it historically belongs to, keeping only confident placements.</p></div>
+      <div class="step"><div class="n">3</div><h3>Bleed metric</h3><p>Keep skill pairs that co-occur far more than chance, span different home roles, and are not synonyms.</p></div>
+      <div class="step"><div class="n">4</div><h3>Communities</h3><p>Cluster the bleed graph alone, so every community bridges two or more historical roles by construction.</p></div>
+      <div class="step"><div class="n">5</div><h3>Vintage</h3><p>Date each bundle's technologies; recent stacks rank as live emergence, old stacks as settled hybrids.</p></div>
+      <div class="step"><div class="n">6</div><h3>Title divergence</h3><p>Measure how often a posting's title names one role while its skills show the cross-boundary bundle.</p></div>
+      <div class="step"><div class="n">7</div><h3>Label</h3><p>A local language model names each isolated bundle from its skills and an example posting.</p></div>
+    </div>
+
+    <div class="figure">
+      <div class="figtitle">The detection pipeline</div>
+      <div class="figsub">We have two independent baselines, role taxonomy and title-pure postings, that converge into the bleed metric. Because neither is derived from Fortune 500 co-occurrence, the method measures drift without circularity.</div>
+      <div class="pipe">
+
+        <div class="lane">
+          <div class="lane-lbl">Data<small>what we read</small></div>
+          <div class="pbox data"><span class="tag">corpus</span><b>47,101</b> Fortune 500 software postings</div>
+          <div class="sub-arrow">↓</div>
+          <div class="pbox data"><span class="tag">extract</span><b>2,026</b> skills, placed and scored</div>
+        </div>
+
+        <div class="flow">▶</div>
+
+        <div class="lane">
+          <div class="lane-lbl">Baseline<small>the "before"</small></div>
+          <div class="pbox base"><span class="tag">reference A</span>Taxonomy role centroids <span class="mono">(43 software roles)</span></div>
+          <div class="sub-arrow">＋</div>
+          <div class="pbox base"><span class="tag">reference B</span>Title-pure posting profiles <span class="mono">(single-role titles)</span></div>
+        </div>
+
+        <div class="flow">▶</div>
+
+        <div class="lane">
+          <div class="lane-lbl">Detection<small>where bleed is measured</small></div>
+          <div class="pbox"><span class="tag">step 1</span>Home role per skill</div>
+          <div class="sub-arrow">↓</div>
+          <div class="pbox"><span class="tag">step 2</span>Bleed metric <span class="mono">lift × cross-home × distance</span></div>
+          <div class="sub-arrow">↓</div>
+          <div class="pbox"><span class="tag">step 3</span>Bleed graph → Louvain communities</div>
+        </div>
+
+        <div class="flow">▶</div>
+
+        <div class="lane">
+          <div class="lane-lbl">Output<small>rank and name</small></div>
+          <div class="pbox"><span class="tag">signals</span>Vintage + title divergence + LLM label</div>
+          <div class="sub-arrow">↓</div>
+          <div class="pbox out-final"><span class="tag">result</span><b>23</b> emergent-role candidates</div>
+        </div>
+
+      </div>
+      <div class="cap">The baseline is the study's "before". Bleed is the gap between it and what employers actually ask for, which is why the two baselines must stay independent of the corpus being searched.</div>
+    </div>
+
+    <div class="methcols">
+      <div>
+        <h3 class="serif">Why a snapshot can detect emergence</h3>
+        <p style="margin-top:10px">In an earlier attempt, I recombined clusters drawn from the same co-occurrence graph and simply kept re-finding the obvious. The method presented here breaks that loop by anchoring the "before" to a role taxonomy and to title-pure postings that are independent of the Fortune 500 co-occurrence patterns we are searching. Bleed is then the measurable gap between what a role was supposed to require and what employers are actually asking for.</p>
+      </div>
+      <div>
+        <h3 class="serif">What is distinctive here</h3>
+        <ul>
+          <li><strong>Cross-sectional bleed.</strong> Emergence is recovered from canonical-versus-observed drift in a single snapshot, not from posting-volume growth over time.</li>
+          <li><strong>Technology-vintage scoring.</strong> Dating the stack separates genuinely emerging bleed from long-settled hybrids; the vintage axis stands in for the missing time axis. In the future we will incorporate temporal signals directly into the model (if we can get the data).</li>
+          <li><strong>An embedding-distance synonym filter.</strong> Requiring the two bleeding skills to be semantically distant removes the near-synonym noise that defeats volume-based methods.</li>
+        </ul>
+        <p class="muted" style="font-size:14px">Hybrid-job research already exists (Lightcast, O*NET, ESCO). We do not claim to have invented hybrid roles; the contribution is a snapshot-compatible, taxonomy-anchored, vintage-scored detector.</p>
+      </div>
+    </div>
+
+    <div class="figure">
+      <div class="figtitle">The technical stack</div>
+      <div class="figsub">The whole study runs on one local workstation with no external API calls: the corpus, the embedding and language models, and the analysis never leave the machine. This was done to reduce token cost and justify the business case for a new graphics card.</div>
+      <div class="arch-boundary">
+        
+
+        <div class="arch-row">
+          <div class="arch-rlbl">Storage<small>the corpus</small></div>
+          <div class="arch-cells">
+            <div class="arch-box storage"><span class="bt">PostgreSQL 17</span><div class="bs">Fortune 500 SDLC job postings and the skills extracted from them</div></div>
+          </div>
+        </div>
+
+        <div class="arch-row">
+          <div class="arch-rlbl">Inference<small>local models</small></div>
+          <div class="arch-cells">
+            <div class="arch-box infer"><span class="bt">qwen3-embedding:8b</span><div class="bs">Embeddings for skill and role matching <span class="mono">4096-d</span></div></div>
+            <div class="arch-box infer"><span class="bt">gemma4</span><div class="bs">Names each detected bundle: labeling only, never detection</div></div>
+            <div class="arch-box index"><span class="bt">FAISS</span><div class="bs">Vector index over the role and skill taxonomy</div></div>
+          </div>
+        </div>
+
+        <div class="arch-down">▼</div>
+
+        <div class="arch-row">
+          <div class="arch-rlbl">Pipeline<small>Python</small></div>
+          <div class="arch-cells">
+            <div class="arch-box pipe"><span class="bt">Skill-bleed mining pipeline</span><div class="bs">Baselines → home role per skill → bleed metric → bleed graph → Louvain communities → vintage score → label</div></div>
+          </div>
+        </div>
+
+        <div class="arch-side">
+          <div class="arch-rlbl">Config &amp; data<small>side inputs</small></div>
+          <div class="arch-cells">
+            <div class="arch-box config"><div class="bs"><span class="mono">pure_title_roles.yaml</span> · <span class="mono">tech_vintage.json</span> · skill blocklist · canonical skill map</div></div>
+          </div>
+        </div>
+
+        <div class="arch-down">▼</div>
+
+        <div class="arch-row">
+          <div class="arch-rlbl">Output<small>artifacts</small></div>
+          <div class="arch-cells">
+            <div class="arch-box out"><span class="bt">Detected candidates</span><div class="bs"><span class="mono">emergent_v3_bleed.json / .md</span> → interactive dashboard → this research page</div></div>
+          </div>
+        </div>
+
+      </div>
+      <div class="cap">Keeping inference local is a deliberate constraint: the analysis costs nothing in external API spend, and no posting or skill data is sent to a third party.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= LANDSCAPE ================= -->
+<section class="section-alt" id="landscape">
+  <div class="a-container">
+    <span class="a-eyebrow kicker">The findings</span>
+    <h2 class="head">The candidate landscape</h2>
+    <p class="lead narrow">Twenty-three candidate roles, read along two independent axes. <b>Bleed</b> asks how far a bundle reaches <i>across</i> established roles, irrespective of age. <b>Recency</b> asks whether a bundle is built on <i>new</i> technology, which is the primary ranking, and where the newest stacks rise to the top. The two rarely coincide: the newest bundles aren't the most cross-cutting, and the bundles that bleed the widest are often long-settled. A low recency score isn't a weak finding but a real cross-role bundle that emerged years ago and stuck.</p>
+
+    <!-- ranking chart: bleed axis -->
+    <div class="figure">
+      <div class="figtitle">Which bundles bleed across the most roles</div>
+      <div class="figsub">Bar length is each bundle's <em>bleed</em> score (0–1): how far its skills spread across established job roles. A high score means the same skill combination keeps showing up in postings for many different traditional roles, rather than sitting inside any single one (a bundle no existing job fully owns). The small figure beside each name is coverage (how many postings it appears in). <b>This view ranks all 23 candidates by bleed alone.</b></div>
+      <div id="rankchart">
+        {initialRows.map((cand) => {
+          const bl = cand.bleed;
+          const pct = bl === null || bl === undefined ? 0 : Math.max(2, bl * 100);
+          return (
+            <div class="rank-row">
+              <div class="nm">{cand.label}</div>
+              <div class="cov">{fmt(cand.coverage)}</div>
+              <div class="bar-track"><div class="bar-fill" data-w={pct} style={`width:${pct}%;background:var(--a-emerald)`}></div></div>
+              <div class="sc">{bl === null || bl === undefined ? '–' : bl.toFixed(3)}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+
+    <!-- emergence map: recency × bleed -->
+    <div class="figure" style="position:relative">
+      <div class="figtitle">The emergence map: recency × bleed</div>
+      <div class="figsub">Each dot is a candidate. Horizontal: the median birth-year of its defining technologies (right = newer). Vertical: its cross-role bleed score (up = wider). Dot size is posting coverage. The top-right corner is the genuinely emerging frontier with roles that are new <em>and</em> cross-cutting. Candidates whose skills have no datable vintage sit in the left lane, placed by bleed. Dated bundles with median vintages before 1990 are pinned to the left edge of the axis.</div>
+      <svg id="timeline" height="470" role="img" aria-label="Scatter plot of 23 candidate roles by technology recency and cross-role bleed. The catalog table further down lists the same candidates with their bleed and recency scores in text form."></svg>
+      <div class="gtip" id="ttip"></div>
+      <div class="cap">The widest-bleeding bundles are frequently older or undatable: cross-cutting is not the same as new.</div>
+    </div>
+
+    <!-- bleed graph -->
+    <div style="margin-top:54px">
+      <h3 class="serif" style="font-size:1.5rem">The bleed graph</h3>
+      <p class="narrow" style="margin-top:10px">Each point is a skill. A line connects two skills only when they co-occur far more than chance, belong to <em>different</em> established roles, and are not synonyms, which is the signal of skill bleed. Communities in this graph are the candidate roles: each dense cluster is one bundle. Shown here: a 200-skill subsample carrying 2,713 of the full graph's 4,093 edges. You can drag, scroll to zoom, and hover any point but it's mainly here because it looks cool.</p>
+      <div id="graph"><div class="gtip" id="gtip"></div></div>
+      <div class="a-visually-hidden">
+      <table style="table-layout:fixed;width:300px">
+        <caption>The most cross-role-connected skills in the subsampled bleed graph, by posting count. A screen-reader/crawler-visible equivalent of the force diagram above.</caption>
+        <thead><tr><th>Skill</th><th>Taxonomy home role</th><th>Postings</th></tr></thead>
+        <tbody>
+          {topSkills.map((s) => (
+            <tr><td>{s.id}</td><td>{s.home}</td><td>{fmt(s.pc)}</td></tr>
+          ))}
+        </tbody>
+      </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FEATURED ================= -->
+<section id="featured">
+  <div class="a-container">
+    <span class="a-eyebrow kicker">The roles taking shape</span>
+    <h2 class="head">Six emerging roles, up close</h2>
+    <p class="lead narrow">The six candidates ranked highest on <b>recency</b> from the newest to the freshly settled. This is deliberately a different six from the widest-<i>bleeding</i> bundles charted just above: recency asks how new a bundle's tech is, bleed asks how far it reaches across roles, and the two rarely pick the same leaders. Each card shows the established roles the bundle draws from and the skills doing the bridging.</p>
+    <div class="blegend">
+      <div class="row"><span class="badge live">Emerging</span><span class="badge warm">Recent</span><span class="badge stable">Settled</span><span>The recency band, from the bundle's median technology birth year: 2018 or later, 2010 to 2017, before 2010. The number beside the badge is the recency score, 0 to 1.</span></div>
+      <div class="row"><span class="badge canon">In canon</span><span>Standard occupation dictionaries already name this role.</span></div>
+      <div class="row"><span class="badge wild">In the wild</span><span>Fortune 500 hiring shows it, but no dictionary names it yet. Hover any badge for detail.</span></div>
+    </div>
+    <div class="feat" id="featured-cards">
+      {CANDS.slice(0, 6).map((cand) => (
+        <Fragment set:html={cardHTML(cand)} />
+      ))}
+    </div>
+  </div>
+</section>
+
+<!-- ================= CATALOG ================= -->
+<section class="section-tint" id="catalog">
+  <div class="a-container">
+    <span class="a-eyebrow kicker">The full set</span>
+    <h2 class="head">Every candidate, ranked</h2>
+    <p class="lead narrow">All 23 detected bundles, sorted by <b>Bleed</b> (how far each crosses established roles) by default. Click any column heading to re-sort, including by <b>Recency</b> (how new the tech is). Each recency cell shows how many of the bundle's top skills carry a datable vintage; a median resting on one or two dated skills is a weak estimate. Coverage counts postings containing a bundle; bundles overlap, so coverage summed across all 23 exceeds the 47,101-posting corpus. "In the wild" marks roles coherent in Fortune 500 hiring but not yet named in the standard occupation dictionaries and "in canon" marks roles those dictionaries already widely recognize. One candidate (Android XR Developer) is flagged as a detection artifact from the manual audit; see the limitations section.</p>
+    <div class="tablewrap">
+      <table id="catalog-table">
+        <caption class="a-visually-hidden">All 23 detected emergent-role candidates with bleed score, recency, posting coverage, home-role mix, and status. Sortable by column; click or activate a row for full details.</caption>
+        <thead><tr>
+          <th data-k="bleed" class="sortable"><button type="button" class="th-btn">#</button></th>
+          <th data-k="label" class="sortable"><button type="button" class="th-btn">Emergent role</button></th>
+          <th data-k="bleed" class="sortable"><button type="button" class="th-btn">Bleed <span class="ar">▾</span></button></th>
+          <th data-k="emergence" class="sortable"><button type="button" class="th-btn">Recency</button></th>
+          <th data-k="coverage" class="sortable"><button type="button" class="th-btn">Postings</button></th>
+          <th class="hide-sm">Bridges</th>
+          <th class="hide-sm">Status</th>
+        </tr></thead>
+        <tbody>
+          {initialRows.map((cand) => {
+            const rc = recencyCell(cand);
+            const bl = cand.bleed;
+            const status = cand.canon === 'in-the-wild'
+              ? '<span class="badge wild" title="Detected as a coherent bundle in Fortune 500 hiring, but standard occupation dictionaries (O*NET, ESCO, Lightcast) do not yet name it as a role">in the wild</span>'
+              : '<span class="badge canon" title="A role that standard occupation dictionaries (O*NET, ESCO, Lightcast) already recognize by name">in canon</span>';
+            const statusFull = status + (cand.artifact ? ' <span class="badge na" title="Flagged in the July 2026 manual audit as a detection artifact: no XR-specific skills; cross-home edges come from Android tooling split across Mobile and VR/AR home roles">artifact</span>' : '');
+            return (
+              <tr class="crow" data-rank={cand.rank} tabindex="0" role="button" aria-expanded="false" aria-label={`${cand.label}, toggle details`}>
+                <td class="rk"><span class="chev">▸</span>{bleedRank.get(cand.rank)}</td>
+                <td class="role">{cand.label}</td>
+                <td>
+                  {bl === null || bl === undefined ? (
+                    <span class="minibar"><span class="mv">–</span></span>
+                  ) : (
+                    <span class="minibar"><span class="mt"><span class="mf" style={`width:${Math.max(3, bl * 100)}%;background:#307C84`}></span></span><span class="mv">{bl.toFixed(2)}</span></span>
+                  )}
+                </td>
+                <td>
+                  {rc.band === 'na' ? (
+                    <><span class="rband na">not scored</span><span class="rdated">{cand.n_dated}/{cand.n_top} dated</span></>
+                  ) : (
+                    <><span class="ryear">{rc.yr}</span><span class={`rband ${rc.band}`}>{rc.label}</span><span class="rdated">{cand.n_dated}/{cand.n_top} dated</span></>
+                  )}
+                </td>
+                <td class="cov">{fmt(cand.coverage)}</td>
+                <td class="mix hide-sm">{summaryMix(cand.home_mix)}</td>
+                <td class="hide-sm" set:html={statusFull}></td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ================= VALIDATION ================= -->
+<section id="validation">
+  <div class="a-container">
+    <span class="a-eyebrow kicker">The evidence</span>
+    <h2 class="head">How we know the signal is real</h2>
+    <p class="lead narrow">The tests below were specified before the results were read, with two post-hoc refinements made and disclosed: the recall signatures and the clustering resolution (final values in the reproducibility note at the end of the page).</p>
+    <div class="valgrid">
+      <div class="valcard"><div class="vn">5/7</div><div class="vl">Known emergent roles recovered as candidates</div></div>
+      <div class="valcard"><div class="vn">96%</div><div class="vl">Candidates judged non-artifact (22/23) in a single-rater manual audit of this run's full output</div></div>
+      <div class="valcard"><div class="vn">z = −50</div><div class="vl">Null-model separation: real role labels remove far more within-role noise than random labels</div></div>
+      <div class="valcard"><div class="vn">8%</div><div class="vl">Bleed edges flagged as possible near-synonyms in a 200-edge embedding audit</div></div>
+    </div>
+    <p class="narrow" style="margin-top:26px;font-size:14.5px;color:var(--a-text-muted)">Behind the bleed metric, every skill's home-role assignment had to survive the two-baseline check: of the 2,026 scored skills, 596 were placed identically by both baselines, 432 agreed within the top three, 393 rest on the taxonomy alone (no title-pure evidence either way), and 605 low-confidence placements were excluded from the graph entirely.</p>
+    <div class="recall" id="recall-list">
+      <h3 class="serif">The seven roles we knew should appear, and five did</h3>
+      {Object.entries(VAL.recall.detail).map(([known, d]) => (
+        !d ? (
+          <div class="rrow miss">
+            <span class="ck">✗</span>
+            <span class="known">{known}</span>
+            <span class="arrow">not recovered</span>
+            <span class="into" style="color:var(--a-text-muted)">no candidate matched this role</span>
+          </div>
+        ) : (
+          <div class="rrow">
+            <span class="ck">✓</span>
+            <span class="known">{known}</span>
+            <span class="arrow">recovered as</span>
+            <span class="into">#{d.candidate_index + 1} {d.candidate_label}</span>
+            <span class="sk" style="margin-left:auto">{(d.matched_skills || []).slice(0, 4).join(', ')}</span>
+          </div>
+        )
+      ))}
+    </div>
+  </div>
+</section>
+
+<!-- ================= LIMITATIONS ================= -->
+<section class="section-alt" id="limits">
+  <div class="a-container">
+    <span class="a-eyebrow kicker">Honest disclosure</span>
+    <h2 class="head">What this study does not claim</h2>
+    <div class="limits">
+      <div class="lim"><span class="dot"></span><div><h3>It is a snapshot, not a trend</h3><p>Emergence is inferred from canonical drift and technology vintage, never from posting-date growth. The corpus spans about five weeks.</p></div></div>
+      <div class="lim"><span class="dot"></span><div><h3>It reflects US Fortune 500 hiring</h3><p>The corpus is large-enterprise and software-role filtered. Findings generalize to that population, not the whole labor market.</p></div></div>
+      <div class="lim"><span class="dot"></span><div><h3>Skill extraction is imperfect</h3><p>An importance floor, a canonical-name map, and a blocklist reduce extraction noise but do not eliminate it; residual false positives (e.g. design tools inside the LLM bundle) stay visible in the skill lists rather than being silently removed. A single-rater manual audit of all 23 candidates (July 2026) flagged one as an artifact: Android XR Developer, whose cross-home edges come from the taxonomy splitting Android tooling across Mobile and VR/AR home roles. It is kept visible and flagged in the catalog rather than hidden.</p></div></div>
+      <div class="lim"><span class="dot"></span><div><h3>Technology dating is fuzzy</h3><p>Birth years are judgment calls drawn from a versioned, auditable lookup and the emergence score is a rank, not a precise date. Several bundles' medians rest on only one or two dated skills; the catalog shows each bundle's dated-skill coverage.</p></div></div>
+      <div class="lim"><span class="dot"></span><div><h3>Ubiquitous skills carry no signal</h3><p>A skill that co-occurs with nearly everything produces no bleed edge by design, so it is absent from the graph. A feature of the method, not a gap.</p></div></div>
+      <div class="lim"><span class="dot"></span><div><h3>Hybrid jobs are prior art</h3><p>The phenomenon is well established in the literature. Our contribution is the snapshot-compatible, taxonomy-anchored, vintage-scored detection method.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CLOSING ================= -->
+<section class="section-dark closing">
+  <div class="a-container">
+    <span class="a-eyebrow kicker">Why it matters</span>
+    <h2 class="serif">Reading skills, not titles</h2>
+    <p>Andela assesses, matches, places, and upskills engineering talent to help enterprises adopt AI responsibly in production. This study is part of how we read the technology talent market by its skills rather than its job titles to see which capabilities are compounding in value before the labels catch up. We also use this data to help tailor learning programs ahead of anyone else in the market.</p>
+    <p>As skill half-lives shorten, the roles forming in the gaps between today's jobs are where tomorrow's talent debt accrues so seeing them early is the point and why I did this.</p>
+    <div class="repro">
+      <strong style="color:#fff">Reproducibility.</strong> Corpus collected 30 March to 2 May 2026 from public Fortune 500 job boards; detected from 47,101 SDLC postings, 2,026 skills scored, on a cross-role bleed graph of 4,093 edges. Embeddings <span class="mono">qwen3-embedding:8b</span> at acceptance threshold 0.55. Bleed edges require co-occurrence support ≥ 60 and lift ≥ 1.3, with a synonym cosine cutoff of 0.78. Louvain resolution 4.0, seed 42 (deterministic); communities kept at ≥ 5 skills, ≥ 5 internal edges, coverage ≥ 120 postings, and hub share ≤ 0.55. Null model: 20 home-label permutations. Recency band: technologies born 2023 or later, the three years preceding the run. Generated 16 June 2026. If you made it to here, ask me for a dollar next time I see you.
+    </div>
+  </div>
+</section>
+
+
+<Fragment slot="footer">
+<footer class="foot">
+  <div class="a-container">
+    <img src="/images/andela-logo.png" alt="Andela" width="95" height="24" loading="lazy">
+    <span class="fz">Andela Research · Workforce intelligence · © 2026 Andela</span>
+  </div>
+</footer>
+</Fragment>
+
+<style is:global>
+/* is:global — not scoped to this component's compiled markup.
+   Necessary because several sections (featured-card HTML from cardHTML() in
+   src/scripts/explorer.ts, and the catalog table's status badges) are
+   injected via set:html: raw HTML strings that Astro's compiler never sees
+   as literal template elements, so it can't tag them with the scoping
+   attribute (data-astro-cid-*) that scoped <style> rules require. Since this
+   is the only page in the app right now, the collision risk a global
+   stylesheet normally carries doesn't apply — every class below is already
+   specific to this page's components.
+
+
+/* This page's component CSS (charts, tables, cards, pipeline diagrams) is
+   layered on top of the imported Andela design system (src/styles/andela/).
+   All colour values below reference --a-* tokens from tokens.css — the
+   local token block and off-brand ink value (#10292C, since corrected to
+   the canonical #132128) that used to live in this file are gone; the
+   design system is now the single source of truth. */
+
+.serif{font-family:var(--a-font-heading);font-weight:400;letter-spacing:-0.3px}
+@media (prefers-reduced-motion: reduce){
+  .fade{transition:none!important}
+  .bar-fill{transition:none!important}
+  tr.detail-row .fcard{animation:none!important}
+  html{scroll-behavior:auto!important}
+}
+
+.narrow{max-width:760px}
+
+/* The design system's global h1-h6 rule sets Droid Serif at weight 400
+   (correct for section/document headings like h1/h2 on this page). These
+   selectors are semantically correct heading levels used as UI component
+   titles (card titles, stepper labels, list-item titles) — per the design
+   system's guidance to use size/weight utilities on the correct tag rather
+   than fight the tag, they explicitly opt back into Inter/bold here. */
+.find h3, .step h3, .methcols h3, .recall h3, .lim h3 {
+  font-family: var(--a-font-body);
+  font-weight: var(--a-weight-bold);
+}
+
+
+/* ---- masthead ---- */
+.masthead{position:sticky;top:0;z-index:50;background:rgba(250,250,250,.86);
+  backdrop-filter:saturate(160%) blur(10px);border-bottom:1px solid var(--a-border)}
+.masthead .a-container{display:flex;align-items:center;justify-content:space-between;height:64px}
+.brand{display:flex;align-items:center;gap:14px}
+.brand img{height:24px;width:auto;display:block}
+.brand .div{width:1px;height:20px;background:var(--a-border)}
+.brand .tag{font-size:12px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--a-text-muted)}
+.topnav{display:flex;gap:26px;font-size:14px;font-weight:500}
+.topnav a{color:var(--a-text-muted)}
+.topnav a:hover{color:var(--a-text)}
+@media(max-width:820px){.topnav{display:none}}
+
+/* ---- hero ---- */
+.hero{position:relative;background:var(--a-darker-kale);color:#fff;overflow:hidden;
+  padding:96px 0 84px}
+.hero .spark-field{position:absolute;inset:0;opacity:.06;pointer-events:none}
+.hero .a-container{position:relative}
+.hero .a-eyebrow{color:var(--a-light-kale)}
+.hero h1{color:#fff;font-family:var(--a-font-heading);font-weight:400;
+  font-size:clamp(2.6rem,6vw,4.6rem);line-height:1.08;margin:22px 0 0;max-width:16ch}
+.hero .dek{color:#cfe0dd;font-size:clamp(1.05rem,1.6vw,1.32rem);line-height:1.6;
+  max-width:60ch;margin:26px 0 0;font-weight:400}
+.hero .meta{margin-top:26px;font-size:13.5px;color:#8fb0ab;letter-spacing:.2px}
+
+/* ---- stat strip ---- */
+.statstrip{background:var(--a-dark-kale);border-top:1px solid rgba(255,255,255,.08);text-align:center}
+.statstrip .a-container{display:flex;flex-flow:row;justify-content:center;align-items:center;text-align:center;gap:0}
+.stat{padding:30px 26px;border-right:1px solid rgba(255,255,255,.08)}
+.stat:last-child{border-right:none}
+.stat .num{font-family:var(--a-font-heading);font-size:2.5rem;line-height:1;color:#fff;font-weight:700;letter-spacing:-0.5px}
+.stat .lbl{margin-top:9px;font-size:13px;color:#a9c6c1;line-height:1.4}
+@media(max-width:820px){.statstrip .a-container{flex-wrap:wrap}
+  .stat{border-bottom:1px solid rgba(255,255,255,.08)}
+  .stat:nth-child(2){border-right:none}}
+
+/* ---- sections ---- */
+/* 8rem top/bottom at desktop, matching --a-space-8xl. The previous 92px
+   was the second-biggest "doesn't look like Andela" tell after container
+   width. Steps down using the existing spacing scale at Webflow's
+   breakpoints rather than inventing new numbers. */
+section{padding:8rem 0}
+@media(max-width:991px){section{padding:6rem 0}}
+@media(max-width:767px){section{padding:4rem 0}}
+@media(max-width:479px){section{padding:3rem 0}}
+.section-alt{background:linear-gradient(180deg,var(--a-lightest-kale),var(--a-almost-white))}
+.section-tint{background:var(--a-white);border-top:1px solid var(--a-border);border-bottom:1px solid var(--a-border)}
+.section-dark{background:var(--a-darker-kale);color:#fff}
+.section-dark h2,.section-dark h3{color:#fff}
+.kicker{display:block;margin-bottom:18px}
+h2.head{font-size:clamp(1.9rem,3.4vw,2.7rem);line-height:1.15;font-family:var(--a-font-heading);font-weight:400}
+.lead{font-size:1.18rem;line-height:1.6;color:var(--a-text-muted);margin:22px 0 0}
+p{margin:18px 0 0}
+.muted{color:var(--a-text-muted)}
+
+/* pull quote */
+.pull{font-family:var(--a-font-heading);font-weight:400;font-size:clamp(1.4rem,2.6vw,2rem);line-height:1.4;
+  color:var(--a-text);border-left:3px solid var(--a-emerald);padding:6px 0 6px 28px;margin:40px 0;max-width:24ch}
+.pull--wide{max-width:30ch}
+
+/* ---- key findings ---- */
+.findgrid{display:grid;grid-template-columns:1fr;gap:18px;margin-top:46px}
+.find{background:var(--a-white);border:1px solid var(--a-border);border-radius:14px;padding:28px 32px;
+  box-shadow:0 1px 3px rgba(16,41,44,.05);display:grid;grid-template-columns:64px minmax(240px,320px) 1fr;column-gap:34px;align-items:start}
+.find .fnum{font-family:var(--a-font-heading);font-size:2.6rem;color:var(--a-lighter-emerald);font-weight:700;line-height:1;
+  grid-column:1;padding-top:3px}
+.find h3{font-size:1.22rem;line-height:1.3;grid-column:2}
+.find p{font-size:15.5px;margin-top:0;grid-column:3;max-width:70ch}
+@media(max-width:900px){.find{grid-template-columns:64px 1fr}
+  .find .fnum{grid-row:1 / span 2}
+  .find h3{grid-column:2}
+  .find p{grid-column:2;margin-top:12px}}
+@media(max-width:760px){.find{grid-template-columns:1fr;padding:24px 22px}
+  .find .fnum{grid-row:auto;font-size:2rem;padding-top:0;margin-bottom:2px}
+  .find h3,.find p{grid-column:1;margin-top:10px}}
+.find .em{color:var(--a-emerald);font-weight:600}
+
+/* ---- stepper ---- */
+.stepper{display:flex;flex-wrap:wrap;gap:10px;margin:40px 0 8px}
+.step{flex:1 1 0;min-width:128px;background:var(--a-white);border:1px solid var(--a-border);border-radius:12px;
+  padding:16px 16px 18px;position:relative}
+.step .n{width:26px;height:26px;border-radius:50%;background:var(--a-lightest-emerald);color:var(--a-emerald);
+  font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;margin-bottom:11px}
+.step h3{font-size:14.5px;line-height:1.25}
+.step p{font-size:13px;margin-top:7px;color:#5d6b67;line-height:1.45}
+.methcols{display:grid;grid-template-columns:1fr 1fr;gap:46px;margin-top:50px}
+@media(max-width:760px){.methcols{grid-template-columns:1fr;gap:30px}}
+.methcols h3{font-size:1.15rem;margin-bottom:6px}
+.methcols ul{margin:14px 0 0;padding-left:20px}
+.methcols li{margin:9px 0;font-size:15.5px}
+
+/* ---- architecture pipeline ---- */
+.pipe{display:flex;align-items:stretch;gap:8px;margin-top:8px}
+.lane{flex:1 1 0;display:flex;flex-direction:column;gap:8px;min-width:0}
+.lane-lbl{font-size:11px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--a-emerald);
+  padding-bottom:8px;margin-bottom:2px;border-bottom:2px solid var(--a-lighter-emerald);min-height:42px}
+.lane-lbl small{display:block;font-weight:500;letter-spacing:0;text-transform:none;color:var(--a-text-muted);font-size:11px;margin-top:2px}
+.pbox{background:var(--a-white);border:1px solid var(--a-border);border-radius:10px;padding:11px 13px;
+  font-size:13px;line-height:1.4;color:var(--a-text);flex:1;display:flex;flex-direction:column;justify-content:center}
+.pbox.data{background:var(--a-lighter-kale);border-color:#bfe0e3}
+.pbox.base{background:var(--a-lightest-emerald);border-color:#cbe7c9}
+.pbox.out-final{background:var(--a-darker-kale);border-color:var(--a-darker-kale);color:#fff;font-weight:600}
+.pbox .tag{display:block;font-size:10px;font-weight:700;color:var(--a-kale);margin-bottom:4px;letter-spacing:.4px;text-transform:uppercase}
+.pbox.base .tag{color:var(--a-emerald)}
+.pbox.out-final .tag{color:var(--a-light-kale)}
+.pbox b{font-weight:700;color:var(--a-text)}
+.pbox.out-final b{color:#fff}
+.pbox .mono{font-size:11.5px;color:#5d6b67;font-style:italic}
+.flow{display:flex;align-items:center;justify-content:center;color:var(--a-kale);font-size:17px;
+  flex:0 0 14px;align-self:center;padding-top:42px}
+.sub-arrow{text-align:center;color:#aebfb9;font-size:13px;line-height:.6;margin:-3px 0}
+@media(max-width:760px){
+  .pipe{flex-direction:column;gap:4px}
+  .lane{gap:8px}
+  .lane-lbl{min-height:0;border-bottom:none;border-left:2px solid var(--a-lighter-emerald);
+    padding:0 0 0 10px;margin:6px 0 2px}
+  .flow{transform:rotate(90deg);flex-basis:auto;padding:6px 0}
+}
+
+/* ---- technical architecture (the stack) ---- */
+.arch-boundary{border:1.5px dashed var(--a-kale);border-radius:14px;padding:18px 18px 20px;margin-top:8px;
+  background:linear-gradient(180deg,var(--a-lightest-kale),#fff)}
+.arch-tag{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:700;letter-spacing:.6px;
+  text-transform:uppercase;color:var(--a-kale);background:var(--a-white);border:1px solid #bfe0e3;
+  border-radius:20px;padding:4px 12px;margin-bottom:16px}
+.arch-tag .dot{width:7px;height:7px;border-radius:50%;background:var(--a-kale)}
+.arch-row{display:grid;grid-template-columns:108px 1fr;gap:14px;align-items:stretch;margin-bottom:10px}
+.arch-rlbl{font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--a-emerald);
+  padding-top:12px;line-height:1.3}
+.arch-rlbl small{display:block;font-weight:500;letter-spacing:0;text-transform:none;color:var(--a-text-muted);font-size:10.5px;margin-top:3px}
+.arch-cells{display:flex;gap:10px;flex-wrap:wrap}
+.arch-box{flex:1 1 0;min-width:150px;border:1px solid var(--a-border);border-radius:10px;padding:11px 14px;
+  background:var(--a-white);font-size:13px;line-height:1.4;color:var(--a-text)}
+.arch-box .bt{font-weight:700;color:var(--a-text)}
+.arch-box .bs{font-size:11.5px;color:#5d6b67;margin-top:2px}
+.arch-box .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;color:var(--a-kale)}
+.arch-box.storage{background:var(--a-lighter-kale);border-color:#bfe0e3}
+.arch-box.infer{background:var(--a-lightest-emerald);border-color:#cbe7c9}
+.arch-box.index{background:var(--a-light-opal);border-color:#cfe6e0}
+.arch-box.pipe{background:var(--a-white);border-color:#cbe7c9;border-left:4px solid var(--a-emerald)}
+.arch-box.config{background:var(--a-lightest-green-black);border-color:var(--a-border)}
+.arch-box.config .mono{color:#5d6b67}
+.arch-box.out{background:var(--a-darker-kale);border-color:var(--a-darker-kale);color:#fff}
+.arch-box.out .bt,.arch-box.out .bs{color:#fff}
+.arch-box.out .mono{color:var(--a-light-kale)}
+.arch-down{display:flex;align-items:center;justify-content:center;color:var(--a-kale);font-size:16px;margin:2px 0}
+.arch-side{display:grid;grid-template-columns:108px 1fr;gap:14px;align-items:center;margin-bottom:10px}
+.arch-side .arch-rlbl{padding-top:0}
+@media(max-width:760px){
+  .arch-row,.arch-side{grid-template-columns:1fr;gap:8px}
+  .arch-rlbl{padding-top:0;border-left:2px solid var(--a-lighter-emerald);padding-left:10px}
+  .arch-cells{flex-direction:column}
+  .arch-box{min-width:0}
+}
+
+/* ---- charts ---- */
+.figure{background:var(--a-white);border:1px solid var(--a-border);border-radius:16px;padding:30px 30px 26px;
+  box-shadow:0 1px 3px rgba(16,41,44,.05);margin-top:30px}
+.figure .cap{font-size:13.5px;color:var(--a-text-muted);margin-top:18px;line-height:1.5}
+.figure .figtitle{font-size:1.05rem;font-weight:600;color:var(--a-text);margin-bottom:4px}
+.figure .figsub{font-size:13.5px;color:var(--a-text-muted);margin-bottom:18px}
+.legend{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:13px;color:var(--a-text-muted);margin-top:4px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:7px;vertical-align:-1px}
+
+/* ranking chart */
+.rank-row{display:grid;grid-template-columns:188px 58px 1fr 64px;align-items:center;gap:12px;padding:5px 0}
+.rank-row .nm{font-size:13.5px;font-weight:500;color:var(--a-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rank-row .nm small{color:var(--a-text-muted);font-weight:400}
+.bar-track{background:var(--a-lightest-green-black);border-radius:6px;height:18px;position:relative;overflow:hidden}
+.bar-fill{height:100%;border-radius:6px;transition:width .9s cubic-bezier(.2,.7,.3,1)}
+.rank-row .sc{font-size:13px;font-variant-numeric:tabular-nums;color:var(--a-text-muted);text-align:right} .rank-row .cov{font-size:12px;color:var(--a-text-muted);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.rank-row .sc.na{color:var(--a-text-muted)}
+@media(max-width:620px){.rank-row{grid-template-columns:96px 46px 1fr 48px;gap:8px}.rank-row .nm small{display:none}}
+
+/* timeline */
+#timeline{width:100%;overflow:visible}
+.tl-dot{cursor:pointer}
+.tl-axis line{stroke:var(--a-border)}
+.tl-axis text{fill:var(--a-text-muted);font-size:11px;font-family:var(--a-font-body)}
+
+/* graph */
+.graph-loading{padding:24px;color:var(--a-text-muted);font-size:14px;text-align:center}
+#graph{width:100%;height:560px;background:linear-gradient(180deg,#fbfdfd,#f3f8f7);
+  border:1px solid var(--a-border);border-radius:16px;position:relative;overflow:hidden;margin-top:30px}
+.gtip{position:absolute;pointer-events:none;background:var(--a-darker-kale);color:#fff;
+  padding:7px 11px;border-radius:8px;font-size:12.5px;opacity:0;transition:opacity .12s;
+  box-shadow:0 6px 20px rgba(16,41,44,.25);max-width:220px}
+.gtip b{color:var(--a-light-kale)}
+
+/* ---- featured cards ---- */
+.feat{display:grid;grid-template-columns:1fr;gap:24px;margin-top:46px}
+.fcard{background:var(--a-white);border:1px solid var(--a-border);border-radius:16px;overflow:hidden;
+  box-shadow:0 1px 3px rgba(16,41,44,.05);display:grid;grid-template-columns:1.35fr 1fr}
+@media(max-width:780px){.fcard{grid-template-columns:1fr}}
+.fcard .left{padding:30px 30px 28px;border-right:1px solid var(--a-border)}
+@media(max-width:780px){.fcard .left{border-right:none;border-bottom:1px solid var(--a-border)}}
+.fcard .right{padding:28px 28px;background:var(--a-lightest-kale)}
+.fhead{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.fhead .rk{font-family:var(--a-font-heading);font-size:1.5rem;font-weight:700;color:var(--a-opal);line-height:1}
+.fhead h3{font-size:1.5rem;font-family:var(--a-font-heading);font-weight:700;letter-spacing:-0.3px}
+.fcard .desc{font-size:15.5px;margin-top:16px;color:var(--a-text-muted)}
+.badge{font-size:11.5px;font-weight:600;padding:3px 11px;border-radius:20px;letter-spacing:.2px;white-space:nowrap}
+.badge.live{background:var(--a-lightest-emerald);color:#256b25;border:1px solid #bfe3bd}
+.badge.warm{background:var(--a-lighter-kale);color:#235c63;border:1px solid #bfe0e3}
+.badge.stable{background:var(--a-lightest-green-black);color:#5d6b67;border:1px solid var(--a-border)}
+.badge.na{background:var(--a-lightest-green-black);color:var(--a-text-muted);border:1px solid var(--a-border)}
+.badge.wild{background:#fff;color:var(--a-emerald);border:1px dashed #9bcc98}
+.badge.canon{background:#fff;color:var(--a-kale);border:1px solid #bfe0e3}
+.chips{margin-top:18px}
+.chip{display:inline-block;background:var(--a-white);border:1px solid var(--a-border);border-radius:20px;
+  padding:4px 12px;margin:0 6px 8px 0;font-size:12.5px;color:var(--a-text-muted)}
+.chip.bridge{background:var(--a-lightest-emerald);border-color:#cbe7c9;color:#2c6b2b}
+.meta-row{display:flex;gap:8px;padding:9px 0;border-bottom:1px dashed var(--a-border);font-size:13.5px}
+.meta-row:last-child{border-bottom:none}
+.meta-row .k{flex:0 0 96px;color:var(--a-text-muted);font-weight:500}
+.meta-row .v{flex:1;color:var(--a-text)}
+.fcard .rlabel{font-size:12.5px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--a-kale);margin-bottom:12px}
+.mix-bar{display:flex;height:14px;border-radius:7px;overflow:hidden;margin:6px 0 12px}
+.mix-bar span{display:block;height:100%}
+.mix-key{font-size:12.5px;color:var(--a-text-muted);line-height:1.7}
+.mix-key i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:0}
+.example{margin-top:14px;background:var(--a-white);border:1px solid var(--a-border);border-radius:10px;padding:13px 15px;font-size:13px;line-height:1.55}
+.example .et{color:var(--a-text-muted)}
+
+/* ---- catalog table ---- */
+.tablewrap{margin-top:38px;border:1px solid var(--a-border);border-radius:14px;overflow:hidden;background:var(--a-white)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+thead th{background:var(--a-lightest-green-black);text-align:left;padding:14px 16px;font-size:12px;
+  font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:#5d6b67;cursor:pointer;user-select:none;white-space:nowrap}
+thead th.sortable:hover{color:var(--a-text)}
+.th-btn{all:unset;display:block;width:100%;cursor:pointer;font:inherit;color:inherit;
+  letter-spacing:inherit;text-transform:inherit}
+.th-btn:focus-visible{outline:2px solid var(--a-emerald);outline-offset:2px;border-radius:3px}
+thead th .ar{color:var(--a-emerald);font-size:10px}
+tbody td{padding:13px 16px;border-top:1px solid var(--a-border);vertical-align:middle}
+tbody tr:hover{background:var(--a-lightest-kale)}
+td.rk{color:var(--a-text-muted);font-variant-numeric:tabular-nums;width:38px}
+td.role{font-weight:600;color:var(--a-text)}
+td.mix{color:#5d6b67;font-size:13px}
+.minibar{display:inline-flex;align-items:center;gap:9px;width:130px}
+.minibar .mt{flex:1;height:8px;background:var(--a-lightest-green-black);border-radius:4px;overflow:hidden}
+.minibar .mf{display:block;height:100%;border-radius:4px}
+.minibar .mv{font-variant-numeric:tabular-nums;font-size:12.5px;color:var(--a-text-muted);width:34px;text-align:right}
+/* recency band chips (table + featured) */
+.ryear{font-variant-numeric:tabular-nums;font-weight:600;margin-right:8px;color:var(--a-text-muted)}
+.rband{display:inline-block;font-size:11px;font-weight:600;padding:2px 9px;border-radius:20px;white-space:nowrap}
+.rband.emerging{background:#E7F5E7;color:#2c7a2b}
+.rband.recent{background:#E2F0F1;color:#2b7079}
+.rband.settled{background:#eef2f0;color:#5f7b74}
+.rband.na{background:#f1f4f3;color:var(--a-text-muted)}
+.rdated{display:block;font-size:10px;color:var(--a-text-muted);margin-top:2px}
+.chips-cap{font-size:11.5px;line-height:1.5;color:var(--a-text-muted);margin:14px 0 2px}
+.blegend{margin:18px 0 2px;font-size:12.5px;color:var(--a-text-muted);display:flex;flex-direction:column;gap:9px}
+.blegend .row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;line-height:1.55}
+.blegend .row>span:last-child{flex:1 1 260px;min-width:200px}
+.blegend .badge{flex:none}
+/* scatter (emergence map) */
+.sc-axis line{stroke:var(--a-border)}
+.sc-axis text{fill:var(--a-text-muted);font-size:11px;font-family:var(--a-font-body)}
+.sc-axis .axlabel{fill:#5f7b74;font-size:11.5px;font-weight:600}
+.sc-quad{fill:var(--a-text-muted);font-size:10.5px;font-weight:600;letter-spacing:.03em;text-transform:uppercase}
+.sc-lane{fill:#f3f7f6}
+.sc-dot{cursor:pointer}
+.cov{font-variant-numeric:tabular-nums}
+@media(max-width:720px){.hide-sm{display:none}}
+/* ---- expandable catalog rows ---- */
+tbody tr.crow{cursor:pointer}
+tbody tr.crow:focus-visible{outline:2px solid var(--a-emerald);outline-offset:-2px}
+td.rk .chev{display:inline-block;margin-right:7px;color:var(--a-light-kale);font-size:11px;
+  transition:transform .2s ease;transform:rotate(0deg);vertical-align:1px}
+tbody tr.crow.is-open{background:var(--a-lightest-kale)}
+tbody tr.crow.is-open .chev{transform:rotate(90deg);color:var(--a-emerald)}
+tr.detail-row > td{padding:0;border-top:none}
+tr.detail-row .fcard{border-radius:0;border-left:none;border-right:none;border-bottom:none;
+  box-shadow:none;animation:detailIn .35s cubic-bezier(.2,.7,.3,1)}
+@keyframes detailIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+
+/* ---- validation ---- */
+.valgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:44px}
+@media(max-width:760px){.valgrid{grid-template-columns:repeat(2,1fr)}}
+.valcard{background:var(--a-white);border:1px solid var(--a-border);border-radius:14px;padding:26px 22px;text-align:center}
+.valcard .vn{font-family:var(--a-font-heading);font-size:2.3rem;font-weight:700;color:var(--a-emerald);line-height:1}
+.valcard .vl{font-size:13px;color:#5d6b67;margin-top:10px;line-height:1.4}
+.recall{background:var(--a-white);border:1px solid var(--a-border);border-radius:14px;padding:28px 30px;margin-top:26px}
+.recall h3{font-size:1.1rem;margin-bottom:6px}
+.recall .rrow{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--a-border);font-size:14.5px;align-items:baseline}
+.recall .rrow:last-child{border-bottom:none}
+.recall .ck{color:var(--a-emerald);font-weight:700}
+.recall .rrow.miss{opacity:.72}
+.recall .rrow.miss .ck{color:#b06a4e}
+.recall .known{font-weight:600;color:var(--a-text);flex:0 0 165px}
+.recall .arrow{color:var(--a-text-muted)}
+.recall .into{color:var(--a-text-muted)}
+.recall .sk{color:var(--a-text-muted);font-size:12.5px}
+@media(max-width:620px){.recall .known{flex-basis:120px}.recall .sk{display:none}}
+
+/* ---- limitations ---- */
+.limits{display:grid;grid-template-columns:1fr 1fr;gap:18px 40px;margin-top:40px}
+@media(max-width:760px){.limits{grid-template-columns:1fr}}
+.lim{display:flex;gap:14px;align-items:flex-start}
+.lim .dot{flex:0 0 8px;width:8px;height:8px;border-radius:50%;background:var(--a-opal);margin-top:9px}
+.lim h3{font-size:1rem;margin-bottom:2px}
+.lim p{margin-top:4px;font-size:14.5px;color:var(--a-text-muted)}
+
+/* ---- closing ---- */
+.closing .a-container{max-width:820px}
+.closing .a-eyebrow{color:var(--a-light-kale)}
+.closing h2{font-family:var(--a-font-heading);font-weight:400;font-size:clamp(1.8rem,3.4vw,2.6rem);line-height:1.2;margin-top:16px;color:#fff}
+.closing p{color:#cfe0dd;font-size:1.08rem}
+.repro{margin-top:34px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);
+  border-radius:12px;padding:18px 22px;font-size:13.5px;color:#a9c6c1}
+.repro code{background:rgba(0,0,0,.25);padding:2px 7px;border-radius:5px;color:#cfe0dd;font-size:12.5px}
+.foot{border-top:1px solid var(--a-border);padding:34px 0;background:var(--a-almost-white)}
+.foot .a-container{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px}
+.foot img{height:20px}
+.foot .fz{font-size:12.5px;color:var(--a-text-muted)}
+
+.fade{opacity:0;transform:translateY(14px)}
+.fade.in{opacity:1;transform:none;transition:opacity .7s ease,transform .7s ease}
+
+</style>
+
+<script>
+  import { initExplorer } from '../../reports/emergent-roles/scripts/explorer';
+  initExplorer();
+</script>
+
+</BaseLayout>

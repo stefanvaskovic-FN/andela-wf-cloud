@@ -1,0 +1,108 @@
+/* ==========================================================================
+   Andela — Utilities
+   Load LAST. Small, single-purpose helpers only.
+   ========================================================================== */
+
+/* --- Screen-reader-only. Required for skip links and live regions. ------- */
+.a-visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Skip link — visible on focus. Every page needs one as its first element. */
+.a-skip-link {
+  position: absolute;
+  top: 0; left: var(--a-space-2xs);
+  z-index: 999;
+  padding: var(--a-space-2xs) var(--a-space-m);
+  background: var(--a-white);
+  color: var(--a-text);
+  border: 1px solid var(--a-border);
+  border-radius: 0 0 var(--a-radius-small) var(--a-radius-small);
+  transform: translateY(-120%);
+  transition: transform var(--a-transition-fast);
+}
+.a-skip-link:focus { transform: translateY(0); }
+
+/* --- Stack: vertical rhythm without margin collapsing surprises --------- */
+.a-stack       { display: flex; flex-direction: column; gap: var(--a-space-m); }
+.a-stack--2xs  { gap: var(--a-space-2xs); }
+.a-stack--xs   { gap: var(--a-space-xs); }
+.a-stack--l    { gap: var(--a-space-l); }
+.a-stack--xl   { gap: var(--a-space-xl); }
+.a-stack--2xl  { gap: var(--a-space-2xl); }
+.a-stack--3xl  { gap: var(--a-space-3xl); }
+
+.a-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--a-grid-gap);
+}
+.a-row--between { justify-content: space-between; }
+.a-row--center  { justify-content: center; }
+.a-row--end     { justify-content: flex-end; }
+.a-row--top     { align-items: flex-start; }
+
+/* --- Measure: caps line length for readability -------------------------- */
+.a-measure       { max-width: 65ch; }
+.a-measure--tight{ max-width: 55ch; }
+.a-measure--wide { max-width: 75ch; }
+
+.a-max-xsmall  { width: 100%; max-width: 25rem; }
+.a-max-small   { width: 100%; max-width: 30rem; }
+.a-max-medium  { width: 100%; max-width: 35rem; }
+.a-max-large   { width: 100%; max-width: 48rem; }
+.a-max-xlarge  { width: 100%; max-width: 60rem; }
+.a-max-xxlarge { width: 100%; max-width: 80rem; }
+
+.a-center { margin-inline: auto; }
+
+/* --- Text colour -------------------------------------------------------- */
+.a-text-ink     { color: var(--a-text); }
+.a-text-muted   { color: var(--a-text-muted); }
+.a-text-white   { color: var(--a-white); }
+.a-text-emerald { color: var(--a-emerald); }
+.a-text-kale    { color: var(--a-kale); }
+
+/* --- Alignment ---------------------------------------------------------- */
+.a-align-left   { text-align: left; }
+.a-align-center { text-align: center; }
+.a-align-right  { text-align: right; }
+.a-nowrap       { white-space: nowrap; }
+.a-balance      { text-wrap: balance; }
+.a-pretty       { text-wrap: pretty; }
+
+/* --- Radius & shadow ---------------------------------------------------- */
+.a-radius-small  { border-radius: var(--a-radius-small); }
+.a-radius-medium { border-radius: var(--a-radius-medium); }
+.a-radius-large  { border-radius: var(--a-radius-large); }
+.a-radius-pill   { border-radius: var(--a-radius-pill); }
+
+.a-shadow-small  { box-shadow: var(--a-shadow-small); }
+.a-shadow-medium { box-shadow: var(--a-shadow-medium); }
+.a-shadow-large  { box-shadow: var(--a-shadow-large); }
+
+/* --- Aspect ratios ----------------------------------------------------- */
+.a-ratio-square      { aspect-ratio: 1; }
+.a-ratio-landscape   { aspect-ratio: 3 / 2; }
+.a-ratio-portrait    { aspect-ratio: 2 / 3; }
+.a-ratio-widescreen  { aspect-ratio: 16 / 9; }
+
+/* --- Misc -------------------------------------------------------------- */
+.a-relative       { position: relative; }
+.a-overflow-hidden{ overflow: hidden; }
+.a-hide           { display: none; }
+
+@media screen and (max-width: 767px) {
+  .a-hide-mobile { display: none; }
+}
+@media screen and (min-width: 768px) {
+  .a-show-mobile { display: none; }
+}

@@ -1,0 +1,256 @@
+/* ==========================================================================
+   Andela — Components
+   Mirrors the component patterns in the Webflow shared stylesheet.
+   Load AFTER tokens.css, elements.css, typography.css.
+
+   Class prefix is `a-` throughout so nothing here can collide with Webflow's
+   own classes if a page ever ends up rendered inside a Webflow shell.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Layout: container & section
+   Andela's container is 90rem max with 5rem side padding, on a 12-col grid.
+   Sections are 8rem top/bottom at desktop. Getting these two right is 80%
+   of "does this page feel like andela.com".
+   -------------------------------------------------------------------------- */
+
+.a-container {
+  width: 100%;
+  max-width: var(--a-container-max);
+  margin-inline: auto;
+  padding-inline: var(--a-container-pad);
+}
+
+.a-container-large  { max-width: 80rem; margin-inline: auto; }
+.a-container-medium { max-width: 64rem; margin-inline: auto; }
+.a-container-small  { max-width: 48rem; margin-inline: auto; }
+
+.a-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-block: var(--a-space-8xl);
+}
+.a-section--small  { padding-block: var(--a-space-3xl); }
+.a-section--medium { padding-block: var(--a-space-5xl); }
+.a-section--flush-top    { padding-top: 0; }
+.a-section--flush-bottom { padding-bottom: 0; }
+
+@media screen and (max-width: 767px) {
+  .a-section { padding-block: var(--a-space-4xl); }
+}
+
+/* Background treatments seen across andela.com */
+.a-bg-white        { background-color: var(--a-white); }
+.a-bg-almost-white { background-color: var(--a-almost-white); }
+.a-bg-emerald-tint { background-color: var(--a-lightest-emerald); }
+.a-bg-ink          { background-color: var(--a-darker-kale); color: var(--a-white); }
+.a-bg-fade-down    { background-image: linear-gradient(180deg, var(--a-white), var(--a-almost-white)); }
+.a-bg-fade-up      { background-image: linear-gradient(0deg, var(--a-white), var(--a-almost-white)); }
+.a-bg-emerald-fade { background-image: linear-gradient(180deg, var(--a-lightest-emerald), var(--a-white)); }
+
+.a-grid-12 {
+  display: grid;
+  grid-template-columns: repeat(var(--a-grid-columns), 1fr);
+  gap: var(--a-grid-gap);
+  width: 100%;
+}
+
+/* --------------------------------------------------------------------------
+   Buttons
+   Andela buttons are FULL PILLS (radius 1600px), 1px bordered, 1.125rem text
+   at weight 400 with a 1rem/1.5rem box. Primary is ink-on-white text.
+   -------------------------------------------------------------------------- */
+
+.a-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--a-space-2xs);
+  padding: var(--a-space-m) var(--a-space-xl);
+  font-size: var(--a-size-text-l);
+  line-height: 1;
+  letter-spacing: var(--a-tracking-body);
+  text-align: center;
+  text-decoration: none;
+  border: 1px solid var(--a-black);
+  border-radius: var(--a-radius-pill);
+  background-color: var(--a-darker-kale);
+  color: var(--a-white);
+  transition: box-shadow var(--a-transition-fast), color var(--a-transition-fast);
+  cursor: pointer;
+}
+.a-btn:hover {
+  color: var(--a-light-emerald);
+  box-shadow: 0 3px 4px #0000001f;
+  text-decoration: none;
+}
+
+.a-btn--secondary {
+  background-color: transparent;
+  color: var(--a-text);
+}
+.a-btn--secondary:hover { color: var(--a-emerald); }
+
+.a-btn--emerald {
+  background-color: var(--a-emerald);
+  border-color: var(--a-emerald);
+  color: var(--a-white);
+}
+.a-btn--emerald:hover { color: var(--a-white); filter: brightness(1.06); }
+
+/* On dark backgrounds */
+.a-btn--alt {
+  background-color: var(--a-white);
+  border-color: var(--a-white);
+  color: var(--a-darker-kale);
+}
+.a-btn--alt:hover { color: var(--a-emerald); }
+
+.a-btn--small {
+  padding: 0.625rem var(--a-space-m);
+  font-size: var(--a-size-text-s);
+  font-weight: var(--a-weight-medium);
+}
+
+.a-btn--link {
+  background-color: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: var(--a-space-3xs) 0;
+  color: var(--a-text);
+}
+
+.a-btn--full { width: 100%; }
+
+.a-btn[disabled],
+.a-btn[aria-disabled="true"] { opacity: 0.5; cursor: not-allowed; }
+
+.a-btn-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--a-grid-gap);
+}
+
+/* --------------------------------------------------------------------------
+   Cards
+   -------------------------------------------------------------------------- */
+
+.a-card {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--a-white);
+  border: 1px solid var(--a-border);
+  border-radius: var(--a-radius-medium);
+  overflow: hidden;
+  box-shadow: var(--a-shadow-xxsmall);
+}
+
+.a-card--ink {
+  background-color: var(--a-darker-kale);
+  color: var(--a-white);
+  border-color: var(--a-darker-kale);
+}
+
+.a-card--tint {
+  background-image: linear-gradient(160deg, var(--a-lightest-emerald), var(--a-white));
+  border-color: var(--a-lighter-emerald);
+}
+
+.a-card--hover { transition: transform var(--a-transition-fast); }
+.a-card--hover:hover { transform: scale(1.02); }
+
+.a-card__body { padding: var(--a-space-2-5xl); }
+.a-card__body--tight { padding: var(--a-space-l); }
+
+/* Panel — a card variant for interactive tools rather than content.
+   Slightly lifted; used for the explorer's control surface. */
+.a-panel {
+  position: relative;
+  background-color: var(--a-white);
+  border: 1px solid var(--a-border);
+  border-radius: var(--a-radius-large);
+  padding: var(--a-space-xl);
+  box-shadow: 0 10px 30px rgb(19 33 40 / 6%);
+}
+
+/* --------------------------------------------------------------------------
+   Tags & chips
+   -------------------------------------------------------------------------- */
+
+.a-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--a-space-2xs);
+  padding: 0.175rem var(--a-space-2xs);
+  font-size: var(--a-size-text-s);
+  font-weight: var(--a-weight-bold);
+  text-decoration: none;
+  color: var(--a-black);
+  background-color: var(--a-almost-white);
+  border: 1px solid var(--a-almost-white);
+}
+.a-tag--alt { background-color: var(--a-white); border-color: var(--a-white); }
+
+.a-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4375rem;
+  padding: 0.3125rem var(--a-space-2xs) 0.3125rem var(--a-space-xs);
+  font-size: var(--a-size-text-s);
+  font-weight: var(--a-weight-medium);
+  color: var(--a-dark-kale);
+  background-color: var(--a-lightest-emerald);
+  border: 1px solid var(--a-lighter-emerald);
+  border-radius: 20px;
+}
+
+/* Chip dismiss control. MUST be a <button> with an aria-label naming the
+   chip it removes — a bare <span class="x"> is not focusable and gives
+   screen readers nothing to announce. */
+.a-chip__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: var(--a-radius-round);
+  background: rgb(19 33 40 / 8%);
+  color: var(--a-dark-kale);
+  font-size: 0.6875rem;
+  line-height: 1;
+}
+.a-chip__remove:hover { background: var(--a-emerald); color: var(--a-white); }
+
+.a-chip-list { display: flex; flex-wrap: wrap; gap: var(--a-space-2xs); }
+
+/* Status chip — pairs colour with a text label so meaning never depends on
+   hue alone (WCAG 1.4.1). */
+.a-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--a-space-3xs);
+  padding: 0.125rem var(--a-space-2xs);
+  border-radius: var(--a-radius-small);
+  font-size: var(--a-size-text-xs);
+  font-weight: var(--a-weight-bold);
+}
+.a-status--success { background: var(--a-success-light); color: var(--a-success-dark); }
+.a-status--info    { background: var(--a-info-light);    color: var(--a-info-dark); }
+.a-status--warning { background: var(--a-warning-light); color: var(--a-warning-dark); }
+.a-status--error   { background: var(--a-error-light);   color: var(--a-error-dark); }
+
+/* --------------------------------------------------------------------------
+   Divider & hairline
+   -------------------------------------------------------------------------- */
+
+.a-divider {
+  width: 100%;
+  height: 1px;
+  background-color: var(--a-border);
+  border: 0;
+  margin: 0;
+}
+.a-divider--on-ink { background-color: var(--a-white-20); }
