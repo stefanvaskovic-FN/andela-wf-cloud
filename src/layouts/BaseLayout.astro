@@ -9,15 +9,18 @@
  * canonical or structured data.
  */
 import '../styles/andela/index.css';
+import { withBase } from '../lib/base';
 
+/**
+ * Astro sam prefiksira bundlovani CSS/JS i url() unutar njega. NE prefiksira
+ * doslovne stringove u HTML atributima — njih vodimo kroz withBase().
+ */
 interface Props {
   /** ~50–60 chars. Unique per page. Include "Andela" once. */
   title: string;
   /** ~150–160 chars, written as a search result, not a summary of the summary. */
   description: string;
-  /** Full site-root-relative path, e.g. "/" or "/reports/emergent-roles". Webflow Cloud's edge adds the environment prefix (/research, /research-staging) — this app never references it. */
-  path?: string;
-  /** Absolute or root-relative image URL, 1200x630. */
+  /** Putanja BEZ base prefiksa, npr. "images/og-hero.png". Prazno = default. */
   ogImage?: string;
   /** "website" for landing pages, "article" for research writeups. */
   ogType?: string;
@@ -30,20 +33,25 @@ interface Props {
 const {
   title,
   description,
-  path = '/research',
   ogImage,
   ogType = 'article',
   schema,
   noindex = false,
 } = Astro.props;
 
-// Astro.site comes from `site` in astro.config.mjs. No `base` involved —
-// the /research segment is physically part of `path` here, since pages
-// live at plain root paths. See astro.config.mjs for why.
-const canonical = new URL(path, Astro.site).href;
-const resolvedOgImage = ogImage
-  ? new URL(ogImage, Astro.site).href
-  : new URL('/images/og-default.png', Astro.site).href;
+/**
+ * Canonical se izvodi iz stvarnog URL-a stranice, ne iz ručno prosljeđenog
+ * propa. Astro.url.pathname već sadrži base ('/research/reports/...'), pa se
+ * prefiks ne može razići sa konfiguracijom. Trailing slash se skida da bi
+ * postojao tačno jedan kanonski oblik.
+ */
+const canonicalPath = Astro.url.pathname.replace(/\/+$/, '') || '/';
+const canonical = new URL(canonicalPath, Astro.site).href;
+
+const resolvedOgImage = new URL(
+  withBase(ogImage ?? 'images/og-default.png'),
+  Astro.site,
+).href;
 ---
 
 <!doctype html>
@@ -58,8 +66,8 @@ const resolvedOgImage = ogImage
     {noindex && <meta name="robots" content="noindex, nofollow" />}
 
     <!-- Self-hosted fonts (no fonts.googleapis.com). Preload the above-the-fold weights. -->
-    <link rel="preload" href="/fonts/Inter-Regular.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href="/fonts/DroidSerif-Regular.ttf" as="font" type="font/ttf" crossorigin />
+    <link rel="preload" href={withBase('fonts/Inter-Regular.woff2')} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={withBase('fonts/DroidSerif-Regular.ttf')} as="font" type="font/ttf" crossorigin />
 
     <!-- Open Graph -->
     <meta property="og:type" content={ogType} />
