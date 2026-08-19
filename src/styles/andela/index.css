@@ -1,5 +1,8 @@
 /* Andela design system — single entry point.
-   Import this one file; order below is load-order-sensitive. */
+   Import this one file; order below is load-order-sensitive.
+   fonts.css MORA biti prvi — @font-face mora biti deklarisan prije nego što
+   ga typography.css referencira. */
+@import "./fonts.css";
 @import "./tokens.css";
 @import "./elements.css";
 @import "./typography.css";
