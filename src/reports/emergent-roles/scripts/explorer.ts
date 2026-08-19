@@ -18,8 +18,10 @@
  */
 import * as d3 from 'd3';
 import { CANDS, VAL, tierOf, tierLabel, fmt, MIXCOL, bleedRankMap, type Candidate } from '../data/roles';
+import { withBase } from '../../../lib/base';
 
-// No BASE_URL/base computation — see astro.config.mjs.
+// Vite inline-uje BASE_URL u bundle na buildu, pa runtime fetch ispod gađa
+// tačan mount path. Vidi src/lib/base.ts.
 
 function announce(msg: string) {
   const el = document.getElementById('a11y-status');
@@ -462,7 +464,7 @@ async function loadAndRenderGraph() {
   loadingMsg.textContent = 'Loading skill-bleed map…';
   el.appendChild(loadingMsg);
   try {
-    const res = await fetch('/data/emergent-roles/graph.json');
+    const res = await fetch(withBase('data/emergent-roles/graph.json'));
     const GRAPH: GraphPayload = await res.json();
     loadingMsg.remove();
 
