@@ -1,20 +1,28 @@
 // astro.config.mjs — Webflow Cloud + Astro
 //
-// `base` MORA da odgovara Path-u koji je podešen na Webflow Cloud environmentu.
-// Webflow Cloud skida prefiks kad traži fajl u dist/ (zato dist/index.html stoji
-// na rootu, bez research/ foldera), ali HTML koji ide browseru mora da SADRŽI
-// prefiks — browser ga razrješava u odnosu na javni URL. To je posao `base`.
+// Skafoldovano po zvanicnom Webflow template-u:
+// github.com/Webflow-Examples/hello-world-astro
 //
-// Ne dodavati `trailingSlash` ni `build.format`. Defaulti ('ignore' + 'directory')
-// su ono što Webflow Cloud edge očekuje; svako odstupanje pravi 301/307 petlju.
+// Kljucno: output MORA biti 'server' i adapter mora biti commitovan. Sa
+// output:'static' build ne emituje workera, pa na mount path odgovara samo
+// Cloudflare static asset handler, koji za research/index.html vraca 307 na
+// /research/ (html_handling: auto-trailing-slash). Webflow edge onda 301
+// vraca na /research, i to je beskonacna petlja koju nijedan base ili
+// build.format ne moze da prekine. Sa 'server' worker sam resava rutiranje.
+//
+// `base` ostaje '/research' jer withBase() (src/lib/base.ts) cita
+// import.meta.env.BASE_URL iz ove vrednosti.
 import { defineConfig } from 'astro/config';
+import cloudflare from '@astrojs/cloudflare';
 
 export default defineConfig({
-  // Koristi se samo za apsolutne canonical / schema.org URL-ove.
   site: 'https://www.andela.com',
-
-  // Mount path Webflow Cloud environmenta.
   base: '/research',
-
-  output: 'static',
+  output: 'server',
+  compressHTML: true,
+  adapter: cloudflare({
+    platformProxy: {
+      enabled: true,
+    },
+  }),
 });

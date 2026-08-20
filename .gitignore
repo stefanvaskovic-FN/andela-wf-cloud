@@ -11,3 +11,13 @@ node_modules/
 
 # editor/OS
 .DS_Store
+# wrangler files
+.wrangler
+.dev.vars*
+# wrangler files
+
+.wrangler
+
+.dev.vars*
+# webflow cli build artifacts
+.tmp/
